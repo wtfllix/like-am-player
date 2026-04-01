@@ -85,8 +85,8 @@ small {
   height: 100%;
   width: 100%;
   object-fit: cover;
-  filter: blur(38px) saturate(1.15);
-  transform: scale(1.08);
+  filter: blur(28px) saturate(1.1);
+  transform: scale(1.05);
 }
 
 .fluid-background {
@@ -332,10 +332,15 @@ small {
   margin-left: 48px;
   font-family: var(--lyric-font-family);
   border-radius: 28px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.01));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035)),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.12), transparent 42%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 18px 44px rgba(0, 0, 0, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+    0 22px 54px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(1.08);
   overflow: hidden;
 }
 

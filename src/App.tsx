@@ -177,10 +177,11 @@ function PlayerScreen(props: {
         <BackgroundRender
           album={config.coverPath}
           className="fluid-background"
+          fps={60}
           flowSpeed={1.8}
           hasLyric={lyrics.length > 0}
           playing={isPlaying}
-          renderScale={0.45}
+          renderScale={1}
         />
         <div className="background-vignette" />
         <div className="background-overlay" />
