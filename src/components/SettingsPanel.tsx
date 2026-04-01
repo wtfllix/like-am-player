@@ -1,4 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import { fontPresets } from "../config/fonts";
+
+const MAX_LYRIC_OFFSET_MS = 10000;
 
 interface SettingsPanelProps {
   customLyricFontLabel: string | null;
@@ -12,6 +15,7 @@ interface SettingsPanelProps {
   onCustomTitleFontFileChange: (file: File | null) => void;
   onChangeLyricOffset: (offsetMs: number) => void;
   onClose: () => void;
+  onResetToStart: () => void;
   onToggleFullscreen: () => void;
   open: boolean;
   titleFontPresetId: string;
@@ -30,10 +34,56 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onCustomTitleFontFileChange,
     onChangeLyricOffset,
     onClose,
+    onResetToStart,
     onToggleFullscreen,
     open,
     titleFontPresetId,
   } = props;
+  const [lyricOffsetInput, setLyricOffsetInput] = useState(String(lyricOffsetMs));
+
+  useEffect(() => {
+    setLyricOffsetInput(String(lyricOffsetMs));
+  }, [lyricOffsetMs]);
+
+  const lyricOffsetError = useMemo(() => {
+    const trimmedValue = lyricOffsetInput.trim();
+
+    if (!trimmedValue) {
+      return "请输入毫秒数，例如 -250 或 300。";
+    }
+
+    if (!/^[+-]?\d+$/.test(trimmedValue)) {
+      return "只支持整数毫秒值，可输入正数或负数。";
+    }
+
+    const parsedValue = Number(trimmedValue);
+
+    if (!Number.isInteger(parsedValue)) {
+      return "歌词延时必须是整数毫秒值。";
+    }
+
+    if (Math.abs(parsedValue) > MAX_LYRIC_OFFSET_MS) {
+      return `请输入 -${MAX_LYRIC_OFFSET_MS} 到 ${MAX_LYRIC_OFFSET_MS} 之间的值。`;
+    }
+
+    return null;
+  }, [lyricOffsetInput]);
+
+  const handleLyricOffsetChange = (nextValue: string) => {
+    setLyricOffsetInput(nextValue);
+
+    const trimmedValue = nextValue.trim();
+    if (!trimmedValue || !/^[+-]?\d+$/.test(trimmedValue)) {
+      return;
+    }
+
+    const parsedValue = Number(trimmedValue);
+    if (!Number.isInteger(parsedValue) || Math.abs(parsedValue) > MAX_LYRIC_OFFSET_MS) {
+      return;
+    }
+
+    onChangeLyricOffset(parsedValue);
+  };
 
   return (
     <aside
@@ -55,6 +105,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <div className="settings-actions">
             <button className="icon-button subtle" onClick={onBackToSetup}>
               换素材
+            </button>
+            <button className="icon-button subtle" onClick={onResetToStart}>
+              回到开头
             </button>
             <button className="icon-button subtle" onClick={onToggleFullscreen}>
               全屏
@@ -134,17 +187,26 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <label className="settings-field">
             <span>歌词延时 (ms)</span>
             <input
-              className="offset-input"
-              onChange={(event) => {
-                const nextValue = Number(event.target.value);
-                onChangeLyricOffset(Number.isFinite(nextValue) ? nextValue : 0);
+              aria-invalid={lyricOffsetError ? "true" : "false"}
+              className={`offset-input ${lyricOffsetError ? "is-invalid" : ""}`}
+              inputMode="numeric"
+              onBlur={() => {
+                if (lyricOffsetError) {
+                  setLyricOffsetInput(String(lyricOffsetMs));
+                }
               }}
-              placeholder="负数提前，正数延后"
-              step={50}
-              type="number"
-              value={lyricOffsetMs}
+              onChange={(event) => {
+                handleLyricOffsetChange(event.target.value);
+              }}
+              placeholder="例如 -250 或 300"
+              type="text"
+              value={lyricOffsetInput}
             />
-            <small>正数会让歌词更晚出现，负数会让歌词更早出现。</small>
+            <small className={lyricOffsetError ? "field-error" : undefined}>
+              {lyricOffsetError
+                ? lyricOffsetError
+                : `正数会让歌词更晚出现，负数会让歌词更早出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
+            </small>
           </label>
 
           <div className="settings-shortcuts">

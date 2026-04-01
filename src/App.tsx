@@ -34,6 +34,7 @@ function PlayerScreen(props: {
     isPlaying,
     lyrics,
     progress,
+    resetToStart,
     seekToProgress,
     togglePlayback,
   } = useLyricVideoPlayer(config);
@@ -206,6 +207,7 @@ function PlayerScreen(props: {
           onClose={() => {
             setIsSettingsOpen(false);
           }}
+          onResetToStart={resetToStart}
           onToggleFullscreen={() => {
             void handleToggleFullscreen();
           }}

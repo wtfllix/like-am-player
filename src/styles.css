@@ -1,9 +1,9 @@
 :root {
   color-scheme: dark;
-  font-family: "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", sans-serif;
   background: #000;
-  --title-font-family: "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
-  --lyric-font-family: "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  --title-font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", sans-serif;
+  --lyric-font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", sans-serif;
   --text-main: rgba(255, 255, 255, 0.96);
   --text-soft: rgba(255, 255, 255, 0.68);
   --glass: rgba(12, 14, 20, 0.42);
@@ -177,7 +177,7 @@ small {
 
 .settings-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -204,6 +204,20 @@ small {
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.24);
   color: var(--text-main);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.offset-input.is-invalid {
+  border-color: rgba(255, 118, 118, 0.72);
+  background: rgba(84, 16, 20, 0.26);
+  box-shadow: 0 0 0 1px rgba(255, 118, 118, 0.18);
+}
+
+.field-error {
+  color: rgba(255, 168, 168, 0.9);
 }
 
 .setup-shell {

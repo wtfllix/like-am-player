@@ -158,6 +158,19 @@ export function useLyricVideoPlayer(config: SongConfig) {
     setCurrentTimeMs(Math.round(audio.currentTime * 1000));
   };
 
+  const resetToStart = () => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+    setCurrentTimeMs(0);
+    setIsPlaying(false);
+  };
+
   return {
     audioRef,
     currentTimeMs,
@@ -167,6 +180,7 @@ export function useLyricVideoPlayer(config: SongConfig) {
     isPlaying,
     lyrics,
     progress,
+    resetToStart,
     seekToProgress,
     togglePlayback,
   };

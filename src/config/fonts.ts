@@ -11,7 +11,7 @@ export const fontPresets: FontPreset[] = [
     label: "Apple 风格",
     description: "最稳，最接近 Apple Music 的克制观感。",
     fontFamily:
-      '"SF Pro Display", "PingFang SC", "Helvetica Neue", "Hiragino Sans GB", sans-serif',
+      '"PingFang SC", "SF Pro Display", "Helvetica Neue", "Hiragino Sans GB", sans-serif',
   },
   {
     id: "avenir",
