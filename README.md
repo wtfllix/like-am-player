@@ -2,6 +2,12 @@
 
 一个用于本地歌词视频预览和录屏的前端模板，基于 React + Vite + TypeScript。
 
+
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/525c68f0-5b2c-4f40-94bd-09f6b054ce52" />
+
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/5fae371c-82bb-402d-a732-d5a732a624b7" />
+
+
 它不是完整播放器产品，更适合这样使用：
 
 - 导入一首歌的音频、歌词、封面
