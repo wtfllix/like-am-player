@@ -54,7 +54,7 @@ export function SetupPage(props: SetupPageProps) {
         <div className="setup-overview">
           <div className="setup-copy">
             <p className="eyebrow">Local Lyric Video</p>
-            <h1>一个网页里体验横屏和竖屏歌词模板</h1>
+            <h1>Apple Music Lyric Template</h1>
             <p className="setup-description">
               你可以直接使用项目自带的 demo 资源，也可以从本机选择音频、歌词和封面图。先选播放模式，再进入预览页调整字体、歌词延时和录屏参数。
             </p>
@@ -70,14 +70,19 @@ export function SetupPage(props: SetupPageProps) {
               {layoutModeOptions.map((option) => (
                 <button
                   key={option.value}
-                  className={`mode-option-button ${layoutMode === option.value ? "is-active" : ""}`}
+                  className={`mode-option-button mode-option-button-${option.value} ${layoutMode === option.value ? "is-active" : ""}`}
                   onClick={() => {
                     onChangeLayoutMode(option.value);
                   }}
                   type="button"
                 >
-                  <strong>{option.label}</strong>
-                  <small>{option.description}</small>
+                  <span className="mode-option-icon" aria-hidden="true">
+                    {option.value === "landscape" ? "🖥️" : "📱"}
+                  </span>
+                  <span className="mode-option-meta">
+                    <strong>{option.label}</strong>
+                    <small>{option.description}</small>
+                  </span>
                 </button>
               ))}
             </div>
