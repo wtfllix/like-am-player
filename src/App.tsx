@@ -4,6 +4,7 @@ import { BackgroundRender, LyricPlayer } from "@applemusic-like-lyrics/react";
 import { PlaybackDock } from "./components/PlaybackDock";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { defaultFontPreset, fontPresets } from "./config/fonts";
+import { type LayoutMode, type LyricDensity } from "./config/layout";
 import { SetupPage } from "./components/SetupPage";
 import { songConfig, type SongConfig } from "./config/song";
 import { useLyricVideoPlayer } from "./hooks/useLyricVideoPlayer";
@@ -14,9 +15,11 @@ function cleanupObjectUrls(urls: string[]) {
 
 function PlayerScreen(props: {
   config: SongConfig;
+  layoutMode: LayoutMode;
   onBackToSetup: () => void;
+  onChangeLayoutMode: (mode: LayoutMode) => void;
 }) {
-  const { config, onBackToSetup } = props;
+  const { config, layoutMode, onBackToSetup, onChangeLayoutMode } = props;
   const [titleFontPresetId, setTitleFontPresetId] = useState(defaultFontPreset.id);
   const [lyricFontPresetId, setLyricFontPresetId] = useState(defaultFontPreset.id);
   const [customTitleFontFamily, setCustomTitleFontFamily] = useState<string | null>(null);
@@ -25,6 +28,8 @@ function PlayerScreen(props: {
   const [customLyricFontLabel, setCustomLyricFontLabel] = useState<string | null>(null);
   const [customTitleFontUrl, setCustomTitleFontUrl] = useState<string | null>(null);
   const [customLyricFontUrl, setCustomLyricFontUrl] = useState<string | null>(null);
+  const [lyricDensity, setLyricDensity] = useState<LyricDensity>("medium");
+  const [lyricFontScale, setLyricFontScale] = useState(1);
   const [lyricOffsetMs, setLyricOffsetMs] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const {
@@ -48,6 +53,22 @@ function PlayerScreen(props: {
     customTitleFontFamily ?? activeTitleFontPreset.fontFamily;
   const resolvedLyricFontFamily =
     customLyricFontFamily ?? activeLyricFontPreset.fontFamily;
+  const lyricDensityVars: Record<LyricDensity, { fontSize: string; linePadding: string }> = {
+    few: {
+      fontSize: "clamp(20px, 3.9vw, 30px)",
+      linePadding: "0.9vh",
+    },
+    medium: {
+      fontSize: "clamp(17px, 3.3vw, 26px)",
+      linePadding: "0.55vh",
+    },
+    many: {
+      fontSize: "clamp(14px, 2.7vw, 22px)",
+      linePadding: "0.28vh",
+    },
+  };
+  const activeLyricDensity = lyricDensityVars[lyricDensity];
+  const isPortrait = layoutMode === "portrait";
 
   const handleCustomFontFileChange = useCallback(async (
     file: File | null,
@@ -161,16 +182,19 @@ function PlayerScreen(props: {
   }, [handleToggleFullscreen, togglePlayback]);
 
   return (
-      <main
-        className="app-shell"
-        style={
-          {
-            fontFamily: resolvedLyricFontFamily,
-            ["--title-font-family" as "--title-font-family"]: resolvedTitleFontFamily,
-            ["--lyric-font-family" as "--lyric-font-family"]: resolvedLyricFontFamily,
-          } as CSSProperties
-        }
-      >
+    <main
+      className={`app-shell ${isPortrait ? "app-shell-portrait" : ""}`}
+      style={
+        {
+          fontFamily: resolvedLyricFontFamily,
+          ["--title-font-family" as "--title-font-family"]: resolvedTitleFontFamily,
+          ["--lyric-font-family" as "--lyric-font-family"]: resolvedLyricFontFamily,
+          ["--portrait-lyric-font-size" as "--portrait-lyric-font-size"]: activeLyricDensity.fontSize,
+          ["--portrait-lyric-line-padding" as "--portrait-lyric-line-padding"]: activeLyricDensity.linePadding,
+          ["--portrait-lyric-font-scale" as "--portrait-lyric-font-scale"]: lyricFontScale.toString(),
+        } as CSSProperties
+      }
+    >
       <audio preload="auto" ref={audioRef} src={config.audioPath} />
 
       <div className="background-stack" aria-hidden="true">
@@ -188,14 +212,20 @@ function PlayerScreen(props: {
         <div className="background-overlay" />
       </div>
 
-      <section className="content-shell">
+      <section className={`content-shell ${isPortrait ? "content-shell-portrait" : ""}`}>
         <SettingsPanel
           customLyricFontLabel={customLyricFontLabel}
           customTitleFontLabel={customTitleFontLabel}
+          layoutMode={layoutMode}
+          lyricDensity={lyricDensity}
           lyricFontPresetId={lyricFontPresetId}
+          lyricFontScale={lyricFontScale}
           lyricOffsetMs={lyricOffsetMs}
           onBackToSetup={onBackToSetup}
+          onChangeLayoutMode={onChangeLayoutMode}
+          onChangeLyricDensity={setLyricDensity}
           onChangeLyricFontPreset={setLyricFontPresetId}
+          onChangeLyricFontScale={setLyricFontScale}
           onChangeTitleFontPreset={setTitleFontPresetId}
           onCustomLyricFontFileChange={(file) => {
             void handleCustomFontFileChange(file, "lyric");
@@ -217,30 +247,71 @@ function PlayerScreen(props: {
 
         <div className="lyrics-panel">
           <div className="stage-grid">
-            <aside className="cover-panel">
-              <div className="cover-card">
-                <img alt={`${config.title} cover`} className="cover-art" src={config.coverPath} />
-              </div>
-            </aside>
+            {isPortrait ? (
+              <>
+                <div className="stage-top">
+                  <aside className="cover-panel">
+                    <div className="cover-card">
+                      <img alt={`${config.title} cover`} className="cover-art" src={config.coverPath} />
+                    </div>
+                  </aside>
 
-            <div className="lyrics-frame">
-              {/* AMLL 的歌词播放器在这里接入。
-                  当前会把音频时间持续转换成毫秒传给 currentTime。
-                  如果以后换成逐词歌词，只要歌词文件本身有更细粒度时间信息，这里基本不用重写。 */}
-              <LyricPlayer
-                alignAnchor="center"
-                alignPosition={0.5}
-                currentTime={adjustedCurrentTimeMs}
-                enableBlur
-                enableScale
-                enableSpring
-                lyricLines={lyrics}
-                playing={isPlaying}
-                style={{
-                  fontFamily: resolvedLyricFontFamily,
-                }}
-              />
-            </div>
+                  <div className="playback-copy stage-copy">
+                    <p className="eyebrow">Now Playing</p>
+                    <h1>{config.title}</h1>
+                    <p className="artist">{config.artist}</p>
+                  </div>
+                </div>
+
+                <div className="stage-lyrics">
+                  <div className="lyrics-frame">
+                    {/* AMLL 的歌词播放器在这里接入。
+                        当前会把音频时间持续转换成毫秒传给 currentTime。
+                        如果以后换成逐词歌词，只要歌词文件本身有更细粒度时间信息，这里基本不用重写。 */}
+                    <LyricPlayer
+                      alignAnchor="center"
+                      alignPosition={0.5}
+                      currentTime={adjustedCurrentTimeMs}
+                      enableBlur
+                      enableScale
+                      enableSpring
+                      lyricLines={lyrics}
+                      playing={isPlaying}
+                      style={{
+                        fontFamily: resolvedLyricFontFamily,
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <aside className="cover-panel">
+                  <div className="cover-card">
+                    <img alt={`${config.title} cover`} className="cover-art" src={config.coverPath} />
+                  </div>
+                </aside>
+
+                <div className="lyrics-frame">
+                  {/* AMLL 的歌词播放器在这里接入。
+                      当前会把音频时间持续转换成毫秒传给 currentTime。
+                      如果以后换成逐词歌词，只要歌词文件本身有更细粒度时间信息，这里基本不用重写。 */}
+                  <LyricPlayer
+                    alignAnchor="center"
+                    alignPosition={0.5}
+                    currentTime={adjustedCurrentTimeMs}
+                    enableBlur
+                    enableScale
+                    enableSpring
+                    lyricLines={lyrics}
+                    playing={isPlaying}
+                    style={{
+                      fontFamily: resolvedLyricFontFamily,
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -248,6 +319,7 @@ function PlayerScreen(props: {
           artist={config.artist}
           currentTimeMs={currentTimeMs}
           duration={duration}
+          hideMeta={isPortrait}
           isPlaying={isPlaying}
           progress={progress}
           title={config.title}
@@ -260,6 +332,7 @@ function PlayerScreen(props: {
 export default function App() {
   const [activeConfig, setActiveConfig] = useState<SongConfig | null>(null);
   const [generatedUrls, setGeneratedUrls] = useState<string[]>([]);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("landscape");
 
   useEffect(() => {
     document.body.classList.toggle("setup-mode", !activeConfig);
@@ -300,6 +373,8 @@ export default function App() {
           <div className="background-overlay" />
         </div>
         <SetupPage
+          layoutMode={layoutMode}
+          onChangeLayoutMode={setLayoutMode}
           onStartDemo={handleStartDemo}
           onStartWithConfig={handleStartWithConfig}
         />
@@ -307,5 +382,12 @@ export default function App() {
     );
   }
 
-  return <PlayerScreen config={activeConfig} onBackToSetup={handleBackToSetup} />;
+  return (
+    <PlayerScreen
+      config={activeConfig}
+      layoutMode={layoutMode}
+      onBackToSetup={handleBackToSetup}
+      onChangeLayoutMode={setLayoutMode}
+    />
+  );
 }

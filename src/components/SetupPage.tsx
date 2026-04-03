@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
+import { layoutModeOptions, type LayoutMode } from "../config/layout";
 import { songConfig, type SongConfig } from "../config/song";
 
 interface SetupPageProps {
+  layoutMode: LayoutMode;
+  onChangeLayoutMode: (mode: LayoutMode) => void;
   onStartDemo: () => void;
   onStartWithConfig: (config: SongConfig, objectUrls: string[]) => void;
 }
@@ -11,7 +14,7 @@ function fileNameWithoutExtension(name: string) {
 }
 
 export function SetupPage(props: SetupPageProps) {
-  const { onStartDemo, onStartWithConfig } = props;
+  const { layoutMode, onChangeLayoutMode, onStartDemo, onStartWithConfig } = props;
   const [title, setTitle] = useState(songConfig.title);
   const [artist, setArtist] = useState(songConfig.artist);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -51,10 +54,33 @@ export function SetupPage(props: SetupPageProps) {
         <div className="setup-overview">
           <div className="setup-copy">
             <p className="eyebrow">Local Lyric Video</p>
-            <h1>选择一首歌，再进入录屏页面</h1>
+            <h1>一个网页里体验横屏和竖屏歌词模板</h1>
             <p className="setup-description">
-              你可以直接使用项目自带的 demo 资源，也可以从本机选择音频、歌词和封面图。进入播放页后，封面会固定在歌词左侧。
+              你可以直接使用项目自带的 demo 资源，也可以从本机选择音频、歌词和封面图。先选播放模式，再进入预览页调整字体、歌词延时和录屏参数。
             </p>
+          </div>
+
+          <div className="setup-mode-block">
+            <div className="setup-mode-copy">
+              <strong>先选播放模式</strong>
+              <p>横屏适合桌面预览，竖屏适合手机录屏；进入播放页后也可以继续切换。</p>
+            </div>
+
+            <div className="mode-option-row">
+              {layoutModeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  className={`mode-option-button ${layoutMode === option.value ? "is-active" : ""}`}
+                  onClick={() => {
+                    onChangeLayoutMode(option.value);
+                  }}
+                  type="button"
+                >
+                  <strong>{option.label}</strong>
+                  <small>{option.description}</small>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="setup-guide setup-guide-list">
@@ -68,7 +94,7 @@ export function SetupPage(props: SetupPageProps) {
             </p>
             <p>
               <strong>进入播放页后：</strong>
-              按 <code>C</code> 打开配置面板，调整歌词延时和字体。
+              按 <code>C</code> 打开配置面板，横屏可调字体和延时，竖屏还可以调字号和同屏行数。
             </p>
           </div>
 

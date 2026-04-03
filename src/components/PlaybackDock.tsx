@@ -4,6 +4,7 @@ interface PlaybackDockProps {
   artist: string;
   currentTimeMs: number;
   duration: number;
+  hideMeta?: boolean;
   isPlaying: boolean;
   progress: number;
   title: string;
@@ -14,6 +15,7 @@ export function PlaybackDock(props: PlaybackDockProps) {
     artist,
     currentTimeMs,
     duration,
+    hideMeta = false,
     isPlaying,
     progress,
     title,
@@ -21,11 +23,13 @@ export function PlaybackDock(props: PlaybackDockProps) {
 
   return (
     <div className="playback-dock">
-      <div className="playback-copy">
-        <p className="eyebrow">Now Playing</p>
-        <h1>{title}</h1>
-        <p className="artist">{artist}</p>
-      </div>
+      {!hideMeta ? (
+        <div className="playback-copy">
+          <p className="eyebrow">Now Playing</p>
+          <h1>{title}</h1>
+          <p className="artist">{artist}</p>
+        </div>
+      ) : null}
 
       <div className="playback-controls">
         <div className="timeline-block">
