@@ -114,3 +114,15 @@ npm run preview
 - TypeScript
 - `@applemusic-like-lyrics/react`
 
+## 部署到 GitHub Pages
+
+仓库已经包含 GitHub Pages 自动部署工作流：
+
+- push 到 `main` 后会自动构建并部署
+- 需要在 GitHub 仓库设置里把 Pages Source 设为 `GitHub Actions`
+
+如果仓库地址是 `https://github.com/wtfllix/like-am-player`，部署后的地址通常会是：
+
+```bash
+https://wtfllix.github.io/like-am-player/
+```

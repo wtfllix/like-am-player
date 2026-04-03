@@ -8,10 +8,14 @@ export interface SongConfig {
   coverPath: string;
 }
 
+function withBase(path: string) {
+  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
+}
+
 export const songConfig: SongConfig = {
   title: "Demo Song",
   artist: "Local Template",
-  audioPath: "/audio/song.mp3",
-  lyricPath: "/lyrics/song.lrc",
-  coverPath: "/images/cover.jpg",
+  audioPath: withBase("audio/song.mp3"),
+  lyricPath: withBase("lyrics/song.lrc"),
+  coverPath: withBase("images/cover.jpg"),
 };
