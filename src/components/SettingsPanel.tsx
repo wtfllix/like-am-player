@@ -102,112 +102,135 @@ export function SettingsPanel(props: SettingsPanelProps) {
         </div>
 
         <div className="settings-body">
-          <div className="settings-actions">
-            <button className="icon-button subtle" onClick={onBackToSetup}>
-              换素材
-            </button>
-            <button className="icon-button subtle" onClick={onResetToStart}>
-              回到开头
-            </button>
-            <button className="icon-button subtle" onClick={onToggleFullscreen}>
-              全屏
-            </button>
-          </div>
+          <section className="settings-group">
+            <div className="settings-group-header">
+              <span>快捷操作</span>
+              <small>录屏前最常用的动作都放在这里。</small>
+            </div>
 
-          <label className="settings-field">
-            <span>标题字体</span>
-            <select
-              className="settings-select"
-              onChange={(event) => onChangeTitleFontPreset(event.target.value)}
-              value={titleFontPresetId}
-            >
-              {fontPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-            <small>
-              {fontPresets.find((preset) => preset.id === titleFontPresetId)?.description}
-            </small>
-          </label>
+            <div className="settings-actions">
+              <button className="icon-button settings-action accent" onClick={onToggleFullscreen}>
+                全屏
+              </button>
+              <button className="icon-button settings-action" onClick={onResetToStart}>
+                回到开头
+              </button>
+              <button className="icon-button settings-action" onClick={onBackToSetup}>
+                换素材
+              </button>
+            </div>
+          </section>
 
-          <label className="settings-field">
-            <span>标题本地字体文件</span>
-            <input
-              accept=".woff,.woff2,.ttf,.otf"
-              className="file-input"
-              onChange={(event) => {
-                onCustomTitleFontFileChange(event.target.files?.[0] ?? null);
-              }}
-              type="file"
-            />
-            <small>
-              {customTitleFontLabel
-                ? `当前已加载：${customTitleFontLabel}`
-                : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
-            </small>
-          </label>
+          <section className="settings-group">
+            <div className="settings-group-header">
+              <span>字体</span>
+              <small>标题和歌词字体集中管理，减少切换时的视觉打断。</small>
+            </div>
 
-          <label className="settings-field">
-            <span>歌词字体</span>
-            <select
-              className="settings-select"
-              onChange={(event) => onChangeLyricFontPreset(event.target.value)}
-              value={lyricFontPresetId}
-            >
-              {fontPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-            <small>
-              {fontPresets.find((preset) => preset.id === lyricFontPresetId)?.description}
-            </small>
-          </label>
+            <div className="settings-field-grid settings-field-grid-compact">
+              <label className="settings-field settings-field-compact">
+                <span>标题字体</span>
+                <select
+                  className="settings-select"
+                  onChange={(event) => onChangeTitleFontPreset(event.target.value)}
+                  value={titleFontPresetId}
+                >
+                  {fontPresets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  {fontPresets.find((preset) => preset.id === titleFontPresetId)?.description}
+                </small>
+              </label>
 
-          <label className="settings-field">
-            <span>歌词本地字体文件</span>
-            <input
-              accept=".woff,.woff2,.ttf,.otf"
-              className="file-input"
-              onChange={(event) => {
-                onCustomLyricFontFileChange(event.target.files?.[0] ?? null);
-              }}
-              type="file"
-            />
-            <small>
-              {customLyricFontLabel
-                ? `当前已加载：${customLyricFontLabel}`
-                : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
-            </small>
-          </label>
+              <label className="settings-field settings-field-compact">
+                <span>歌词字体</span>
+                <select
+                  className="settings-select"
+                  onChange={(event) => onChangeLyricFontPreset(event.target.value)}
+                  value={lyricFontPresetId}
+                >
+                  {fontPresets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  {fontPresets.find((preset) => preset.id === lyricFontPresetId)?.description}
+                </small>
+              </label>
 
-          <label className="settings-field">
-            <span>歌词延时 (ms)</span>
-            <input
-              aria-invalid={lyricOffsetError ? "true" : "false"}
-              className={`offset-input ${lyricOffsetError ? "is-invalid" : ""}`}
-              inputMode="numeric"
-              onBlur={() => {
-                if (lyricOffsetError) {
-                  setLyricOffsetInput(String(lyricOffsetMs));
-                }
-              }}
-              onChange={(event) => {
-                handleLyricOffsetChange(event.target.value);
-              }}
-              placeholder="例如 -250 或 300"
-              type="text"
-              value={lyricOffsetInput}
-            />
-            <small className={lyricOffsetError ? "field-error" : undefined}>
-              {lyricOffsetError
-                ? lyricOffsetError
-                : `正数会让歌词更晚出现，负数会让歌词更早出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
-            </small>
-          </label>
+              <label className="settings-field settings-field-compact">
+                <span>标题本地字体文件</span>
+                <input
+                  accept=".woff,.woff2,.ttf,.otf"
+                  className="file-input"
+                  onChange={(event) => {
+                    onCustomTitleFontFileChange(event.target.files?.[0] ?? null);
+                  }}
+                  type="file"
+                />
+                <small>
+                  {customTitleFontLabel
+                    ? `当前已加载：${customTitleFontLabel}`
+                    : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
+                </small>
+              </label>
+
+              <label className="settings-field settings-field-compact">
+                <span>歌词本地字体文件</span>
+                <input
+                  accept=".woff,.woff2,.ttf,.otf"
+                  className="file-input"
+                  onChange={(event) => {
+                    onCustomLyricFontFileChange(event.target.files?.[0] ?? null);
+                  }}
+                  type="file"
+                />
+                <small>
+                  {customLyricFontLabel
+                    ? `当前已加载：${customLyricFontLabel}`
+                    : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
+                </small>
+              </label>
+            </div>
+          </section>
+
+          <section className="settings-group">
+            <div className="settings-group-header">
+              <span>歌词</span>
+              <small>延时微调用来对齐音频和歌词出现时机。</small>
+            </div>
+
+            <label className="settings-field">
+              <span>歌词延时 (ms)</span>
+              <input
+                aria-invalid={lyricOffsetError ? "true" : "false"}
+                className={`offset-input ${lyricOffsetError ? "is-invalid" : ""}`}
+                inputMode="numeric"
+                onBlur={() => {
+                  if (lyricOffsetError) {
+                    setLyricOffsetInput(String(lyricOffsetMs));
+                  }
+                }}
+                onChange={(event) => {
+                  handleLyricOffsetChange(event.target.value);
+                }}
+                placeholder="例如 -250 或 300"
+                type="text"
+                value={lyricOffsetInput}
+              />
+              <small className={lyricOffsetError ? "field-error" : undefined}>
+                {lyricOffsetError
+                  ? lyricOffsetError
+                  : `正数会让歌词更晚出现，负数会让歌词更早出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
+              </small>
+            </label>
+          </section>
 
           <div className="settings-shortcuts">
             <span>快捷键</span>

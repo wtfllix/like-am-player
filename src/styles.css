@@ -142,11 +142,11 @@ small {
 .settings-card {
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 18px;
+  gap: 14px;
   min-height: 100%;
-  padding: 24px;
+  padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 28px 0 0 28px;
+  border-radius: 28px;
   background:
     linear-gradient(180deg, rgba(18, 22, 30, 0.9), rgba(10, 12, 18, 0.9));
   box-shadow:
@@ -158,52 +158,101 @@ small {
 .settings-header {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   align-items: start;
 }
 
 .settings-header h2 {
   margin: 0;
   color: var(--text-main);
-  font-size: 32px;
+  font-size: 25px;
   letter-spacing: -0.04em;
 }
 
 .settings-body {
   display: grid;
   align-content: start;
-  gap: 18px;
+  gap: 14px;
+}
+
+.settings-body small {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-group {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-group-header {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-group-header span {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .settings-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.settings-action {
+  min-width: 0;
+  width: 100%;
+}
+
+.settings-action.accent {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82));
+  color: #0c0f15;
+}
+
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.settings-field-grid-compact {
+  gap: 8px 12px;
 }
 
 .settings-field {
   display: grid;
-  gap: 10px;
-  padding: 18px;
+  gap: 8px;
+  padding: 13px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.04);
 }
 
+.settings-field-compact {
+  padding: 10px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .settings-field span {
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .settings-select,
 .offset-input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 9px 11px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.24);
   color: var(--text-main);
+  font-size: 13px;
   transition:
     border-color 180ms ease,
     box-shadow 180ms ease,
@@ -223,15 +272,28 @@ small {
 .setup-shell {
   position: relative;
   z-index: 1;
-  display: block;
+  display: grid;
+  align-items: stretch;
   min-height: 100dvh;
-  padding: 32px;
+  padding: 28px 32px;
 }
 
-.setup-card {
-  width: min(980px, 100%);
+.setup-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.05fr) minmax(420px, 0.95fr);
+  gap: 24px;
+  width: min(1400px, 100%);
   margin: 0 auto;
-  padding: 34px;
+  min-height: calc(100dvh - 56px);
+}
+
+.setup-overview,
+.setup-panel {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
+  padding: 28px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 34px;
   background:
@@ -243,60 +305,121 @@ small {
 }
 
 .setup-copy {
-  max-width: 700px;
-  margin-bottom: 28px;
+  max-width: 720px;
 }
 
 .setup-copy h1 {
   margin: 0;
   color: var(--text-main);
-  font-size: clamp(32px, 4vw, 58px);
+  font-size: clamp(28px, 3vw, 46px);
   letter-spacing: -0.05em;
 }
 
 .setup-description {
-  margin: 14px 0 0;
+  margin: 10px 0 0;
   color: var(--text-soft);
-  font-size: 18px;
-  line-height: 1.6;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.setup-guide {
+  display: grid;
+  gap: 14px;
+}
+
+.setup-guide-list {
+  gap: 12px;
+}
+
+.setup-guide-list p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.setup-guide-list strong {
+  color: var(--text-main);
+}
+
+.setup-tip {
+  display: grid;
+  gap: 6px;
+  padding: 15px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.setup-tip p {
+  margin: 0;
+}
+
+.setup-tip,
+.setup-tip p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.setup-tip strong {
+  color: var(--text-main);
+}
+
+.setup-panel-header h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 28px;
+  letter-spacing: -0.04em;
+}
+
+.setup-panel-header p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.64);
+  line-height: 1.5;
 }
 
 .setup-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
 }
 
 .field {
   display: grid;
-  gap: 10px;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.03);
+  gap: 8px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .field span {
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .text-input,
 .file-input {
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.28);
   color: var(--text-main);
 }
 
+.field small {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .setup-actions {
   display: flex;
   gap: 14px;
   justify-content: flex-end;
-  margin-top: 24px;
+  margin-top: 18px;
 }
 
 .lyrics-panel {
@@ -511,12 +634,22 @@ small {
     grid-template-columns: 1fr;
   }
 
-  .setup-card {
-    padding: 22px;
-  }
-
   .setup-shell {
     padding: 18px;
+  }
+
+  .settings-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-layout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .setup-overview,
+  .setup-panel {
+    padding: 22px;
   }
 
   .setup-grid {
