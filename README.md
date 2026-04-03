@@ -20,6 +20,8 @@
 
 ## 快速开始
 
+线上体验：[Apple Music like player](https://wtfllix.github.io/like-am-player/)
+
 ```bash
 npm install
 npm run dev
@@ -61,13 +63,6 @@ npm run preview
 
 首页点击“使用 Demo 素材”即可。
 
-默认 Demo 资源位于：
-
-- [public/audio/song.mp3](/Users/lx/projects/applemusiclike/public/audio/song.mp3)
-- [public/lyrics/song.lrc](/Users/lx/projects/applemusiclike/public/lyrics/song.lrc)
-- [public/lyrics/song.ttml](/Users/lx/projects/applemusiclike/public/lyrics/song.ttml)
-- [public/images/cover.jpg](/Users/lx/projects/applemusiclike/public/images/cover.jpg)
-
 ## 推荐上手顺序
 
 1. 先运行项目并点击“使用 Demo 素材”
@@ -93,36 +88,9 @@ npm run preview
 - `F`：进入 / 退出全屏
 - `Esc`：关闭配置面板
 
-## 固定替换默认歌曲
-
-如果你想把仓库里的 Demo 素材换成自己的默认歌曲，可以替换 `public/` 下的资源，并更新配置文件：
-
-- [src/config/song.ts](/Users/lx/projects/applemusiclike/src/config/song.ts)
-
-这里主要维护：
-
-- `title`
-- `artist`
-- `audioPath`
-- `lyricPath`
-- `coverPath`
-
 ## 技术栈
 
 - React 18
 - Vite 5
 - TypeScript
 - `@applemusic-like-lyrics/react`
-
-## 部署到 GitHub Pages
-
-仓库已经包含 GitHub Pages 自动部署工作流：
-
-- push 到 `main` 后会自动构建并部署
-- 需要在 GitHub 仓库设置里把 Pages Source 设为 `GitHub Actions`
-
-如果仓库地址是 `https://github.com/wtfllix/like-am-player`，部署后的地址通常会是：
-
-```bash
-https://wtfllix.github.io/like-am-player/
-```
