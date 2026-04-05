@@ -456,7 +456,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
               <small className={lyricOffsetError ? "field-error" : undefined}>
                 {lyricOffsetError
                   ? lyricOffsetError
-                  : `正数会让歌词更早出现，负数会让歌词更晚出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
+                  : `正数会让歌词更晚出现，负数会让歌词更早出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
               </small>
             </label>
           </section>

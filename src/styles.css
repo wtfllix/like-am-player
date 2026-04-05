@@ -966,6 +966,18 @@ small {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.18);
   overflow: hidden;
+  cursor: ew-resize;
+  transition:
+    height 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.timeline:hover,
+.timeline.is-dragging {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.04);
 }
 
 .timeline-fill {

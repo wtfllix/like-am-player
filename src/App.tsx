@@ -69,7 +69,7 @@ function PlayerScreen(props: {
     togglePlayback,
   } = useLyricVideoPlayer(config);
 
-  const adjustedCurrentTimeMs = Math.max(0, currentTimeMs - lyricOffsetMs);
+  const adjustedCurrentTimeMs = Math.max(0, currentTimeMs + lyricOffsetMs);
   const activeTitleFontPreset =
     fontPresets.find((preset) => preset.id === titleFontPresetId) ?? defaultFontPreset;
   const activeLyricFontPreset =
@@ -359,6 +359,7 @@ function PlayerScreen(props: {
           duration={duration}
           hideMeta={isPortrait}
           isPlaying={isPlaying}
+          onSeek={seekToProgress}
           progress={progress}
           title={config.title}
         />
