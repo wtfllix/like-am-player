@@ -4,7 +4,7 @@ import { BackgroundRender, LyricPlayer } from "@applemusic-like-lyrics/react";
 import { PlaybackDock } from "./components/PlaybackDock";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { defaultFontPreset, fontPresets } from "./config/fonts";
-import { type LayoutMode, type LyricDensity } from "./config/layout";
+import { type LayoutMode, type LyricDensity, type PortraitPlatform } from "./config/layout";
 import { SetupPage } from "./components/SetupPage";
 import { songConfig, type SongConfig } from "./config/song";
 import { useLyricVideoPlayer } from "./hooks/useLyricVideoPlayer";
@@ -16,10 +16,19 @@ function cleanupObjectUrls(urls: string[]) {
 function PlayerScreen(props: {
   config: SongConfig;
   layoutMode: LayoutMode;
+  portraitPlatform: PortraitPlatform;
   onBackToSetup: () => void;
   onChangeLayoutMode: (mode: LayoutMode) => void;
+  onChangePortraitPlatform: (platform: PortraitPlatform) => void;
 }) {
-  const { config, layoutMode, onBackToSetup, onChangeLayoutMode } = props;
+  const {
+    config,
+    layoutMode,
+    onBackToSetup,
+    onChangeLayoutMode,
+    onChangePortraitPlatform,
+    portraitPlatform,
+  } = props;
   const [titleFontPresetId, setTitleFontPresetId] = useState(defaultFontPreset.id);
   const [lyricFontPresetId, setLyricFontPresetId] = useState(defaultFontPreset.id);
   const [customTitleFontFamily, setCustomTitleFontFamily] = useState<string | null>(null);
@@ -183,7 +192,7 @@ function PlayerScreen(props: {
 
   return (
     <main
-      className={`app-shell ${isPortrait ? "app-shell-portrait" : ""}`}
+      className={`app-shell ${isPortrait ? "app-shell-portrait app-shell-portrait-platform-" + portraitPlatform : ""}`}
       style={
         {
           fontFamily: resolvedLyricFontFamily,
@@ -223,6 +232,7 @@ function PlayerScreen(props: {
           lyricOffsetMs={lyricOffsetMs}
           onBackToSetup={onBackToSetup}
           onChangeLayoutMode={onChangeLayoutMode}
+          onChangePortraitPlatform={onChangePortraitPlatform}
           onChangeLyricDensity={setLyricDensity}
           onChangeLyricFontPreset={setLyricFontPresetId}
           onChangeLyricFontScale={setLyricFontScale}
@@ -242,6 +252,7 @@ function PlayerScreen(props: {
             void handleToggleFullscreen();
           }}
           open={isSettingsOpen}
+          portraitPlatform={portraitPlatform}
           titleFontPresetId={titleFontPresetId}
         />
 
@@ -333,6 +344,7 @@ export default function App() {
   const [activeConfig, setActiveConfig] = useState<SongConfig | null>(null);
   const [generatedUrls, setGeneratedUrls] = useState<string[]>([]);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("landscape");
+  const [portraitPlatform, setPortraitPlatform] = useState<PortraitPlatform>("default");
 
   useEffect(() => {
     document.body.classList.toggle("setup-mode", !activeConfig);
@@ -388,6 +400,8 @@ export default function App() {
       layoutMode={layoutMode}
       onBackToSetup={handleBackToSetup}
       onChangeLayoutMode={setLayoutMode}
+      onChangePortraitPlatform={setPortraitPlatform}
+      portraitPlatform={portraitPlatform}
     />
   );
 }

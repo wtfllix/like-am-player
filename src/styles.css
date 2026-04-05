@@ -8,6 +8,9 @@
   --text-soft: rgba(255, 255, 255, 0.68);
   --glass: rgba(12, 14, 20, 0.42);
   --glass-border: rgba(255, 255, 255, 0.1);
+  --portrait-safe-top: 42px;
+  --portrait-safe-right: 64px;
+  --portrait-safe-bottom: 132px;
 }
 
 * {
@@ -73,6 +76,24 @@ small {
   overflow: hidden;
 }
 
+.app-shell-portrait-platform-default {
+  --portrait-safe-top: 24px;
+  --portrait-safe-right: 18px;
+  --portrait-safe-bottom: 28px;
+}
+
+.app-shell-portrait-platform-xiaohongshu {
+  --portrait-safe-top: 42px;
+  --portrait-safe-right: 64px;
+  --portrait-safe-bottom: 132px;
+}
+
+.app-shell-portrait-platform-douyin {
+  --portrait-safe-top: 36px;
+  --portrait-safe-right: 78px;
+  --portrait-safe-bottom: 164px;
+}
+
 .app-shell-setup {
   min-height: 100dvh;
   overflow: visible;
@@ -134,9 +155,10 @@ small {
   gap: 22px;
   overflow: hidden;
   padding:
-    max(24px, env(safe-area-inset-top, 24px))
-    22px
-    max(28px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+    max(var(--portrait-safe-top), calc(env(safe-area-inset-top, 0px) + 20px))
+    max(18px, var(--portrait-safe-right))
+    max(var(--portrait-safe-bottom), calc(env(safe-area-inset-bottom, 0px) + 20px))
+    22px;
 }
 
 .settings-panel {
@@ -691,6 +713,7 @@ small {
   border: 0;
   backdrop-filter: none;
   overflow: visible;
+  padding-right: 10px;
 }
 
 .lyrics-frame > div {
@@ -766,6 +789,7 @@ small {
   padding: 0;
   transform: none;
   align-self: center;
+  padding-right: 10px;
 }
 
 .eyebrow {
@@ -821,6 +845,7 @@ small {
   margin-left: 0;
   padding-top: 2px;
   min-width: 0;
+  padding-right: 10px;
 }
 
 .icon-button {
@@ -895,6 +920,7 @@ small {
 
 .app-shell-portrait .stage-copy {
   min-width: 0;
+  padding-right: 10px;
 }
 
 .app-shell-portrait .stage-copy .eyebrow {
@@ -1004,13 +1030,32 @@ small {
 }
 
 @media (max-width: 640px) {
+  .app-shell-portrait-platform-default {
+    --portrait-safe-top: 18px;
+    --portrait-safe-right: 16px;
+    --portrait-safe-bottom: 22px;
+  }
+
+  .app-shell-portrait-platform-xiaohongshu {
+    --portrait-safe-top: 30px;
+    --portrait-safe-right: 64px;
+    --portrait-safe-bottom: 118px;
+  }
+
+  .app-shell-portrait-platform-douyin {
+    --portrait-safe-top: 26px;
+    --portrait-safe-right: 74px;
+    --portrait-safe-bottom: 150px;
+  }
+
   .content-shell-portrait {
     width: 100%;
     gap: 18px;
     padding:
-      max(18px, env(safe-area-inset-top, 18px))
-      16px
-      max(22px, calc(env(safe-area-inset-bottom, 0px) + 16px));
+      max(var(--portrait-safe-top), calc(env(safe-area-inset-top, 0px) + 16px))
+      max(16px, var(--portrait-safe-right))
+      max(var(--portrait-safe-bottom), calc(env(safe-area-inset-bottom, 0px) + 16px))
+      16px;
   }
 
   .app-shell-portrait .stage-top {

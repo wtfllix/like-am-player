@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { fontPresets } from "../config/fonts";
-import { layoutModeOptions, lyricDensityOptions, type LayoutMode, type LyricDensity } from "../config/layout";
+import {
+  layoutModeOptions,
+  lyricDensityOptions,
+  portraitPlatformOptions,
+  type LayoutMode,
+  type LyricDensity,
+  type PortraitPlatform,
+} from "../config/layout";
 
 const MAX_LYRIC_OFFSET_MS = 10000;
 
@@ -25,6 +32,8 @@ interface SettingsPanelProps {
   onResetToStart: () => void;
   onToggleFullscreen: () => void;
   open: boolean;
+  portraitPlatform: PortraitPlatform;
+  onChangePortraitPlatform: (platform: PortraitPlatform) => void;
   titleFontPresetId: string;
 }
 
@@ -47,9 +56,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onCustomTitleFontFileChange,
     onChangeLyricOffset,
     onClose,
+    onChangePortraitPlatform,
     onResetToStart,
     onToggleFullscreen,
     open,
+    portraitPlatform,
     titleFontPresetId,
   } = props;
   const [lyricOffsetInput, setLyricOffsetInput] = useState(String(lyricOffsetMs));
@@ -248,6 +259,26 @@ export function SettingsPanel(props: SettingsPanelProps) {
 
             {layoutMode === "portrait" ? (
               <>
+                <label className="settings-field">
+                  <span>平台适配</span>
+                  <select
+                    className="settings-select"
+                    onChange={(event) => {
+                      onChangePortraitPlatform(event.target.value as PortraitPlatform);
+                    }}
+                    value={portraitPlatform}
+                  >
+                    {portraitPlatformOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <small>
+                    {portraitPlatformOptions.find((option) => option.value === portraitPlatform)?.description}
+                  </small>
+                </label>
+
                 <label className="settings-field">
                   <span>同屏歌词行数</span>
                   <select
