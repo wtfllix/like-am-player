@@ -83,13 +83,13 @@ small {
 }
 
 .app-shell-portrait-platform-xiaohongshu {
-  --portrait-safe-top: 42px;
+  --portrait-safe-top: 56px;
   --portrait-safe-right: 64px;
   --portrait-safe-bottom: 132px;
 }
 
 .app-shell-portrait-platform-douyin {
-  --portrait-safe-top: 36px;
+  --portrait-safe-top: 52px;
   --portrait-safe-right: 78px;
   --portrait-safe-bottom: 164px;
 }
@@ -1037,13 +1037,13 @@ small {
   }
 
   .app-shell-portrait-platform-xiaohongshu {
-    --portrait-safe-top: 30px;
+    --portrait-safe-top: 42px;
     --portrait-safe-right: 64px;
     --portrait-safe-bottom: 118px;
   }
 
   .app-shell-portrait-platform-douyin {
-    --portrait-safe-top: 26px;
+    --portrait-safe-top: 40px;
     --portrait-safe-right: 74px;
     --portrait-safe-bottom: 150px;
   }
