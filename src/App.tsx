@@ -78,6 +78,7 @@ function PlayerScreen(props: {
   };
   const activeLyricDensity = lyricDensityVars[lyricDensity];
   const isPortrait = layoutMode === "portrait";
+  const isSquarePlatform = isPortrait && portraitPlatform !== "default";
 
   const handleCustomFontFileChange = useCallback(async (
     file: File | null,
@@ -192,7 +193,7 @@ function PlayerScreen(props: {
 
   return (
     <main
-      className={`app-shell ${isPortrait ? "app-shell-portrait app-shell-portrait-platform-" + portraitPlatform : ""}`}
+      className={`app-shell ${isPortrait ? "app-shell-portrait app-shell-portrait-platform-" + portraitPlatform : ""} ${isSquarePlatform ? "app-shell-square-platform" : ""}`}
       style={
         {
           fontFamily: resolvedLyricFontFamily,
@@ -221,7 +222,7 @@ function PlayerScreen(props: {
         <div className="background-overlay" />
       </div>
 
-      <section className={`content-shell ${isPortrait ? "content-shell-portrait" : ""}`}>
+      <section className={`content-shell ${isPortrait ? "content-shell-portrait" : ""} ${isSquarePlatform ? "content-shell-portrait-square" : ""}`}>
         <SettingsPanel
           customLyricFontLabel={customLyricFontLabel}
           customTitleFontLabel={customTitleFontLabel}

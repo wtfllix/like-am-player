@@ -83,15 +83,26 @@ small {
 }
 
 .app-shell-portrait-platform-xiaohongshu {
-  --portrait-safe-top: 56px;
-  --portrait-safe-right: 64px;
-  --portrait-safe-bottom: 132px;
+  --portrait-safe-top: 24px;
+  --portrait-safe-right: 24px;
+  --portrait-safe-bottom: 28px;
 }
 
 .app-shell-portrait-platform-douyin {
-  --portrait-safe-top: 52px;
-  --portrait-safe-right: 78px;
-  --portrait-safe-bottom: 164px;
+  --portrait-safe-top: 24px;
+  --portrait-safe-right: 24px;
+  --portrait-safe-bottom: 28px;
+}
+
+.app-shell-square-platform {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(100vw, 100dvh);
+  min-height: min(100vw, 100dvh);
+  height: min(100vw, 100dvh);
+  transform: translate(-50%, -50%);
+  aspect-ratio: 1 / 1;
 }
 
 .app-shell-setup {
@@ -159,6 +170,17 @@ small {
     max(18px, var(--portrait-safe-right))
     max(var(--portrait-safe-bottom), calc(env(safe-area-inset-bottom, 0px) + 20px))
     22px;
+}
+
+.content-shell-portrait-square {
+  width: 100%;
+  max-width: none;
+  gap: 16px;
+  padding:
+    max(24px, calc(env(safe-area-inset-top, 0px) + 12px))
+    max(24px, var(--portrait-safe-right))
+    max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px))
+    24px;
 }
 
 .settings-panel {
@@ -629,6 +651,20 @@ small {
   min-width: 0;
 }
 
+.app-shell-square-platform .stage-grid {
+  gap: 16px;
+}
+
+.app-shell-square-platform .stage-top {
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.app-shell-square-platform .stage-lyrics {
+  overflow: hidden;
+}
+
 .app-shell-portrait .stage-lyrics {
   display: block;
   width: 100%;
@@ -650,6 +686,10 @@ small {
   height: auto;
   justify-content: flex-start;
   align-items: center;
+}
+
+.app-shell-square-platform .cover-art {
+  border-radius: 18px;
 }
 
 .cover-card {
@@ -716,6 +756,10 @@ small {
   padding-right: 10px;
 }
 
+.app-shell-square-platform .lyrics-frame {
+  padding-right: 0;
+}
+
 .lyrics-frame > div {
   height: 100%;
   font-family: var(--lyric-font-family) !important;
@@ -752,6 +796,15 @@ small {
   mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
+}
+
+.app-shell-square-platform .lyrics-frame > div {
+  --amll-lyric-player-font-size: calc(
+    clamp(16px, 2.8vw, 24px) *
+    var(--portrait-lyric-font-scale, 1)
+  );
+  width: 100%;
+  transform: none;
 }
 
 .lyrics-frame > div * {
@@ -792,6 +845,10 @@ small {
   padding-right: 10px;
 }
 
+.app-shell-square-platform .playback-copy {
+  padding-right: 0;
+}
+
 .eyebrow {
   margin: 0 0 14px;
   color: rgba(255, 255, 255, 0.36);
@@ -824,9 +881,17 @@ small {
   letter-spacing: -0.035em;
 }
 
+.app-shell-square-platform .playback-copy h1 {
+  font-size: clamp(20px, 3.5vw, 28px);
+}
+
 .app-shell-portrait .artist {
   margin-top: 6px;
   font-size: clamp(14px, 2.5vw, 18px);
+}
+
+.app-shell-square-platform .artist {
+  font-size: clamp(13px, 2vw, 16px);
 }
 
 .playback-controls {
@@ -846,6 +911,11 @@ small {
   padding-top: 2px;
   min-width: 0;
   padding-right: 10px;
+}
+
+.app-shell-square-platform .playback-controls {
+  padding-top: 0;
+  padding-right: 0;
 }
 
 .icon-button {
@@ -921,6 +991,10 @@ small {
 .app-shell-portrait .stage-copy {
   min-width: 0;
   padding-right: 10px;
+}
+
+.app-shell-square-platform .stage-copy {
+  padding-right: 0;
 }
 
 .app-shell-portrait .stage-copy .eyebrow {
@@ -1037,15 +1111,15 @@ small {
   }
 
   .app-shell-portrait-platform-xiaohongshu {
-    --portrait-safe-top: 42px;
-    --portrait-safe-right: 64px;
-    --portrait-safe-bottom: 118px;
+    --portrait-safe-top: 18px;
+    --portrait-safe-right: 18px;
+    --portrait-safe-bottom: 22px;
   }
 
   .app-shell-portrait-platform-douyin {
-    --portrait-safe-top: 40px;
-    --portrait-safe-right: 74px;
-    --portrait-safe-bottom: 150px;
+    --portrait-safe-top: 18px;
+    --portrait-safe-right: 18px;
+    --portrait-safe-bottom: 22px;
   }
 
   .content-shell-portrait {
@@ -1058,8 +1132,21 @@ small {
       16px;
   }
 
+  .content-shell-portrait-square {
+    padding:
+      max(18px, calc(env(safe-area-inset-top, 0px) + 12px))
+      max(18px, var(--portrait-safe-right))
+      max(18px, calc(env(safe-area-inset-bottom, 0px) + 12px))
+      18px;
+  }
+
   .app-shell-portrait .stage-top {
     grid-template-columns: 104px minmax(0, 1fr);
     gap: 14px;
+  }
+
+  .app-shell-square-platform .stage-top {
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 12px;
   }
 }
