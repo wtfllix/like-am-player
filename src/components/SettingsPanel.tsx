@@ -12,6 +12,7 @@ import {
 const MAX_LYRIC_OFFSET_MS = 10000;
 
 interface SettingsPanelProps {
+  artist: string;
   customLyricFontLabel: string | null;
   customTitleFontLabel: string | null;
   layoutMode: LayoutMode;
@@ -29,16 +30,22 @@ interface SettingsPanelProps {
   onCustomTitleFontFileChange: (file: File | null) => void;
   onChangeLyricOffset: (offsetMs: number) => void;
   onClose: () => void;
+  onReplaceAudioFile: (file: File) => void;
+  onReplaceCoverFile: (file: File) => void;
+  onReplaceLyricFile: (file: File) => Promise<void>;
   onResetToStart: () => void;
   onToggleFullscreen: () => void;
   open: boolean;
   portraitPlatform: PortraitPlatform;
   onChangePortraitPlatform: (platform: PortraitPlatform) => void;
+  onUpdateSongMeta: (patch: { title: string; artist: string }) => void;
+  title: string;
   titleFontPresetId: string;
 }
 
 export function SettingsPanel(props: SettingsPanelProps) {
   const {
+    artist,
     customLyricFontLabel,
     customTitleFontLabel,
     layoutMode,
@@ -56,18 +63,33 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onCustomTitleFontFileChange,
     onChangeLyricOffset,
     onClose,
+    onReplaceAudioFile,
+    onReplaceCoverFile,
+    onReplaceLyricFile,
     onChangePortraitPlatform,
+    onUpdateSongMeta,
     onResetToStart,
     onToggleFullscreen,
     open,
     portraitPlatform,
+    title,
     titleFontPresetId,
   } = props;
   const [lyricOffsetInput, setLyricOffsetInput] = useState(String(lyricOffsetMs));
+  const [titleInput, setTitleInput] = useState(title);
+  const [artistInput, setArtistInput] = useState(artist);
 
   useEffect(() => {
     setLyricOffsetInput(String(lyricOffsetMs));
   }, [lyricOffsetMs]);
+
+  useEffect(() => {
+    setTitleInput(title);
+  }, [title]);
+
+  useEffect(() => {
+    setArtistInput(artist);
+  }, [artist]);
 
   const lyricOffsetError = useMemo(() => {
     const trimmedValue = lyricOffsetInput.trim();
@@ -107,6 +129,13 @@ export function SettingsPanel(props: SettingsPanelProps) {
     }
 
     onChangeLyricOffset(parsedValue);
+  };
+
+  const handleSongMetaBlur = () => {
+    onUpdateSongMeta({
+      title: titleInput.trim() || title,
+      artist: artistInput.trim() || artist,
+    });
   };
 
   return (
@@ -165,6 +194,95 @@ export function SettingsPanel(props: SettingsPanelProps) {
               <button className="icon-button settings-action" onClick={onBackToSetup}>
                 换素材
               </button>
+            </div>
+          </section>
+
+          <section className="settings-group">
+            <div className="settings-group-header">
+              <span>换素材</span>
+              <small>可以单独替换任意一个项目，不用回到首页重新选整套素材。</small>
+            </div>
+
+            <div className="settings-field-grid settings-field-grid-compact">
+              <label className="settings-field settings-field-compact">
+                <span>歌曲标题</span>
+                <input
+                  className="text-input"
+                  onBlur={handleSongMetaBlur}
+                  onChange={(event) => {
+                    setTitleInput(event.target.value);
+                  }}
+                  type="text"
+                  value={titleInput}
+                />
+              </label>
+
+              <label className="settings-field settings-field-compact">
+                <span>歌手</span>
+                <input
+                  className="text-input"
+                  onBlur={handleSongMetaBlur}
+                  onChange={(event) => {
+                    setArtistInput(event.target.value);
+                  }}
+                  type="text"
+                  value={artistInput}
+                />
+              </label>
+
+              <label className="settings-field settings-field-compact">
+                <span>替换音频</span>
+                <input
+                  accept="audio/*"
+                  className="file-input"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+
+                    if (file) {
+                      onReplaceAudioFile(file);
+                      event.target.value = "";
+                    }
+                  }}
+                  type="file"
+                />
+                <small>重新选择后会立即替换当前播放的音频。</small>
+              </label>
+
+              <label className="settings-field settings-field-compact">
+                <span>替换歌词</span>
+                <input
+                  accept=".lrc,.yrc,.qrc,.lys,.eslrc,.ttml,text/plain,application/xml,text/xml"
+                  className="file-input"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+
+                    if (file) {
+                      void onReplaceLyricFile(file);
+                      event.target.value = "";
+                    }
+                  }}
+                  type="file"
+                />
+                <small>替换后会重新解析歌词，当前其它设置保持不变。</small>
+              </label>
+
+              <label className="settings-field settings-field-compact">
+                <span>替换封面</span>
+                <input
+                  accept="image/*"
+                  className="file-input"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+
+                    if (file) {
+                      onReplaceCoverFile(file);
+                      event.target.value = "";
+                    }
+                  }}
+                  type="file"
+                />
+                <small>封面和背景会一起更新，不需要重新进入播放页。</small>
+              </label>
             </div>
           </section>
 
@@ -338,7 +456,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
               <small className={lyricOffsetError ? "field-error" : undefined}>
                 {lyricOffsetError
                   ? lyricOffsetError
-                  : `正数会让歌词更晚出现，负数会让歌词更早出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
+                  : `正数会让歌词更早出现，负数会让歌词更晚出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
               </small>
             </label>
           </section>

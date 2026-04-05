@@ -13,6 +13,14 @@ function cleanupObjectUrls(urls: string[]) {
   urls.forEach((url) => URL.revokeObjectURL(url));
 }
 
+function replaceManagedUrl(
+  managedUrls: string[],
+  previousUrl: string | undefined,
+  nextUrl: string,
+) {
+  return [...managedUrls.filter((url) => url !== previousUrl), nextUrl];
+}
+
 function PlayerScreen(props: {
   config: SongConfig;
   layoutMode: LayoutMode;
@@ -20,6 +28,10 @@ function PlayerScreen(props: {
   onBackToSetup: () => void;
   onChangeLayoutMode: (mode: LayoutMode) => void;
   onChangePortraitPlatform: (platform: PortraitPlatform) => void;
+  onReplaceAudioFile: (file: File) => void;
+  onReplaceCoverFile: (file: File) => void;
+  onReplaceLyricFile: (file: File) => Promise<void>;
+  onUpdateSongMeta: (patch: Pick<SongConfig, "title" | "artist">) => void;
 }) {
   const {
     config,
@@ -27,6 +39,10 @@ function PlayerScreen(props: {
     onBackToSetup,
     onChangeLayoutMode,
     onChangePortraitPlatform,
+    onReplaceAudioFile,
+    onReplaceCoverFile,
+    onReplaceLyricFile,
+    onUpdateSongMeta,
     portraitPlatform,
   } = props;
   const [titleFontPresetId, setTitleFontPresetId] = useState(defaultFontPreset.id);
@@ -53,7 +69,7 @@ function PlayerScreen(props: {
     togglePlayback,
   } = useLyricVideoPlayer(config);
 
-  const adjustedCurrentTimeMs = Math.max(0, currentTimeMs + lyricOffsetMs);
+  const adjustedCurrentTimeMs = Math.max(0, currentTimeMs - lyricOffsetMs);
   const activeTitleFontPreset =
     fontPresets.find((preset) => preset.id === titleFontPresetId) ?? defaultFontPreset;
   const activeLyricFontPreset =
@@ -144,6 +160,10 @@ function PlayerScreen(props: {
     };
   }, [customLyricFontUrl, customTitleFontUrl]);
 
+  useEffect(() => {
+    setLyricOffsetMs(0);
+  }, [config.audioPath, config.lyricFileName, config.lyricPath, config.lyricText]);
+
   const handleToggleFullscreen = useCallback(async () => {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
@@ -224,6 +244,7 @@ function PlayerScreen(props: {
 
       <section className={`content-shell ${isPortrait ? "content-shell-portrait" : ""} ${isSquarePlatform ? "content-shell-portrait-square" : ""}`}>
         <SettingsPanel
+          artist={config.artist}
           customLyricFontLabel={customLyricFontLabel}
           customTitleFontLabel={customTitleFontLabel}
           layoutMode={layoutMode}
@@ -248,12 +269,17 @@ function PlayerScreen(props: {
           onClose={() => {
             setIsSettingsOpen(false);
           }}
+          onReplaceAudioFile={onReplaceAudioFile}
+          onReplaceCoverFile={onReplaceCoverFile}
+          onReplaceLyricFile={onReplaceLyricFile}
           onResetToStart={resetToStart}
           onToggleFullscreen={() => {
             void handleToggleFullscreen();
           }}
+          onUpdateSongMeta={onUpdateSongMeta}
           open={isSettingsOpen}
           portraitPlatform={portraitPlatform}
+          title={config.title}
           titleFontPresetId={titleFontPresetId}
         />
 
@@ -377,6 +403,93 @@ export default function App() {
     setActiveConfig(null);
   };
 
+  const handleUpdateSongMeta = (patch: Pick<SongConfig, "title" | "artist">) => {
+    setActiveConfig((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ...patch,
+      };
+    });
+  };
+
+  const handleReplaceAudioFile = (file: File) => {
+    if (!activeConfig) {
+      return;
+    }
+
+    const previousAudioPath = activeConfig.audioPath;
+    const nextAudioPath = URL.createObjectURL(file);
+
+    setGeneratedUrls((current) => {
+      if (current.includes(previousAudioPath)) {
+        URL.revokeObjectURL(previousAudioPath);
+      }
+
+      return replaceManagedUrl(current, previousAudioPath, nextAudioPath);
+    });
+
+    setActiveConfig((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        audioPath: nextAudioPath,
+      };
+    });
+
+  };
+
+  const handleReplaceCoverFile = (file: File) => {
+    if (!activeConfig) {
+      return;
+    }
+
+    const previousCoverPath = activeConfig.coverPath;
+    const nextCoverPath = URL.createObjectURL(file);
+
+    setGeneratedUrls((current) => {
+      if (current.includes(previousCoverPath)) {
+        URL.revokeObjectURL(previousCoverPath);
+      }
+
+      return replaceManagedUrl(current, previousCoverPath, nextCoverPath);
+    });
+
+    setActiveConfig((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        coverPath: nextCoverPath,
+      };
+    });
+  };
+
+  const handleReplaceLyricFile = async (file: File) => {
+    const lyricText = await file.text();
+
+    setActiveConfig((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        lyricFileName: file.name,
+        lyricPath: undefined,
+        lyricText,
+      };
+    });
+  };
+
   if (!activeConfig) {
     return (
       <main className="app-shell app-shell-setup">
@@ -402,6 +515,10 @@ export default function App() {
       onBackToSetup={handleBackToSetup}
       onChangeLayoutMode={setLayoutMode}
       onChangePortraitPlatform={setPortraitPlatform}
+      onReplaceAudioFile={handleReplaceAudioFile}
+      onReplaceCoverFile={handleReplaceCoverFile}
+      onReplaceLyricFile={handleReplaceLyricFile}
+      onUpdateSongMeta={handleUpdateSongMeta}
       portraitPlatform={portraitPlatform}
     />
   );
