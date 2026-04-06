@@ -258,7 +258,7 @@ export async function renderSquareCoverArtwork(options: CoverArtworkOptions) {
   const mainCoverY = size * 0.11;
   const textMaxWidth = size * 0.76;
   const titleY = mainCoverY + mainCoverSize + size * 0.12;
-  const artistY = size * 0.895;
+  const artistY = size * 0.88;
 
   context.fillStyle = rgbToString(darken(palette.shadow, 0.18));
   context.fillRect(0, 0, size, size);
@@ -322,8 +322,8 @@ export async function renderSquareCoverArtwork(options: CoverArtworkOptions) {
     context.fillText(line, size / 2, titleStartY + titleLineHeight * index, textMaxWidth);
   });
 
-  context.fillStyle = "rgba(255, 255, 255, 0.66)";
-  context.font = `500 ${Math.round(size * 0.039)}px ${options.titleFontFamily}`;
+  context.fillStyle = "rgba(255, 255, 255, 0.82)";
+  context.font = `600 ${Math.round(size * 0.048)}px ${options.titleFontFamily}`;
   context.fillText(options.artist.trim() || "Unknown Artist", size / 2, artistY, textMaxWidth);
 
   return canvas.toDataURL("image/png");
