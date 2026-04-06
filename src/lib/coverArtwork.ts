@@ -323,7 +323,7 @@ export async function renderSquareCoverArtwork(options: CoverArtworkOptions) {
   });
 
   context.fillStyle = "rgba(255, 255, 255, 0.66)";
-  context.font = `500 ${Math.round(size * 0.033)}px ${options.titleFontFamily}`;
+  context.font = `500 ${Math.round(size * 0.039)}px ${options.titleFontFamily}`;
   context.fillText(options.artist.trim() || "Unknown Artist", size / 2, artistY, textMaxWidth);
 
   return canvas.toDataURL("image/png");
