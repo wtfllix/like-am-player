@@ -8,13 +8,17 @@ import {
   type LyricDensity,
   type PortraitPlatform,
 } from "../config/layout";
+import type { CoverArtworkTemplateId, coverArtworkTemplates } from "../lib/coverArtwork";
 
 const MAX_LYRIC_OFFSET_MS = 10000;
+type SettingsSection = "playback" | "assets";
 
 interface SettingsPanelProps {
   artist: string;
   coverArtworkError: string | null;
   coverArtworkPreviewUrl: string | null;
+  coverArtworkTemplateId: CoverArtworkTemplateId;
+  coverArtworkTemplates: typeof coverArtworkTemplates;
   customLyricFontLabel: string | null;
   customTitleFontLabel: string | null;
   isGeneratingCoverArtwork: boolean;
@@ -28,6 +32,7 @@ interface SettingsPanelProps {
   onChangeLyricDensity: (density: LyricDensity) => void;
   onChangeLyricFontPreset: (presetId: string) => void;
   onChangeLyricFontScale: (scale: number) => void;
+  onChangeCoverArtworkTemplate: (templateId: CoverArtworkTemplateId) => void;
   onChangeTitleFontPreset: (presetId: string) => void;
   onDownloadCoverArtwork: () => void;
   onCustomLyricFontFileChange: (file: File | null) => void;
@@ -53,6 +58,8 @@ export function SettingsPanel(props: SettingsPanelProps) {
     artist,
     coverArtworkError,
     coverArtworkPreviewUrl,
+    coverArtworkTemplateId,
+    coverArtworkTemplates,
     customLyricFontLabel,
     customTitleFontLabel,
     isGeneratingCoverArtwork,
@@ -66,6 +73,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onChangeLyricDensity,
     onChangeLyricFontPreset,
     onChangeLyricFontScale,
+    onChangeCoverArtworkTemplate,
     onChangeTitleFontPreset,
     onDownloadCoverArtwork,
     onCustomLyricFontFileChange,
@@ -88,6 +96,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
   const [lyricOffsetInput, setLyricOffsetInput] = useState(String(lyricOffsetMs));
   const [titleInput, setTitleInput] = useState(title);
   const [artistInput, setArtistInput] = useState(artist);
+  const [activeSection, setActiveSection] = useState<SettingsSection>("playback");
 
   useEffect(() => {
     setLyricOffsetInput(String(lyricOffsetMs));
@@ -164,357 +173,423 @@ export function SettingsPanel(props: SettingsPanelProps) {
           </button>
         </div>
 
+        <div className="settings-section-tabs" role="tablist" aria-label="配置分组">
+          <button
+            aria-selected={activeSection === "playback"}
+            className={`settings-section-tab ${activeSection === "playback" ? "is-active" : ""}`}
+            onClick={() => {
+              setActiveSection("playback");
+            }}
+            role="tab"
+            type="button"
+          >
+            播放设置
+          </button>
+          <button
+            aria-selected={activeSection === "assets"}
+            className={`settings-section-tab ${activeSection === "assets" ? "is-active" : ""}`}
+            onClick={() => {
+              setActiveSection("assets");
+            }}
+            role="tab"
+            type="button"
+          >
+            素材面板
+          </button>
+        </div>
+
         <div className="settings-body">
-          <section className="settings-group">
-            <div className="settings-group-header">
-              <span>播放模式</span>
-              <small>同一套素材可以随时切换横屏或竖屏布局。</small>
-            </div>
+          {activeSection === "playback" ? (
+            <>
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>播放模式</span>
+                  <small>同一套素材可以随时切换横屏或竖屏布局。</small>
+                </div>
 
-            <div className="mode-option-row">
-              {layoutModeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  className={`mode-option-button ${layoutMode === option.value ? "is-active" : ""}`}
-                  onClick={() => {
-                    onChangeLayoutMode(option.value);
-                  }}
-                  type="button"
-                >
-                  <strong>{option.label}</strong>
-                  <small>{option.description}</small>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="settings-group">
-            <div className="settings-group-header">
-              <span>快捷操作</span>
-              <small>录屏前最常用的动作都放在这里。</small>
-            </div>
-
-            <div className="settings-actions">
-              <button className="icon-button settings-action accent" onClick={onToggleFullscreen}>
-                全屏
-              </button>
-              <button className="icon-button settings-action" onClick={onResetToStart}>
-                回到开头
-              </button>
-              <button className="icon-button settings-action" onClick={onBackToSetup}>
-                换素材
-              </button>
-            </div>
-          </section>
-
-          <section className="settings-group">
-            <div className="settings-group-header">
-              <span>换素材</span>
-              <small>可以单独替换任意一个项目，不用回到首页重新选整套素材。</small>
-            </div>
-
-            <div className="settings-field-grid settings-field-grid-compact">
-              <label className="settings-field settings-field-compact">
-                <span>歌曲标题</span>
-                <input
-                  className="text-input"
-                  onBlur={handleSongMetaBlur}
-                  onChange={(event) => {
-                    setTitleInput(event.target.value);
-                  }}
-                  type="text"
-                  value={titleInput}
-                />
-              </label>
-
-              <label className="settings-field settings-field-compact">
-                <span>歌手</span>
-                <input
-                  className="text-input"
-                  onBlur={handleSongMetaBlur}
-                  onChange={(event) => {
-                    setArtistInput(event.target.value);
-                  }}
-                  type="text"
-                  value={artistInput}
-                />
-              </label>
-
-              <label className="settings-field settings-field-compact">
-                <span>替换音频</span>
-                <input
-                  accept="audio/*"
-                  className="file-input"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-
-                    if (file) {
-                      onReplaceAudioFile(file);
-                      event.target.value = "";
-                    }
-                  }}
-                  type="file"
-                />
-                <small>重新选择后会立即替换当前播放的音频。</small>
-              </label>
-
-              <label className="settings-field settings-field-compact">
-                <span>替换歌词</span>
-                <input
-                  accept=".lrc,.yrc,.qrc,.lys,.eslrc,.ttml,text/plain,application/xml,text/xml"
-                  className="file-input"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-
-                    if (file) {
-                      void onReplaceLyricFile(file);
-                      event.target.value = "";
-                    }
-                  }}
-                  type="file"
-                />
-                <small>替换后会重新解析歌词，当前其它设置保持不变。</small>
-              </label>
-
-              <label className="settings-field settings-field-compact">
-                <span>替换封面</span>
-                <input
-                  accept="image/*"
-                  className="file-input"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-
-                    if (file) {
-                      onReplaceCoverFile(file);
-                      event.target.value = "";
-                    }
-                  }}
-                  type="file"
-                />
-                <small>封面和背景会一起更新，不需要重新进入播放页。</small>
-              </label>
-            </div>
-          </section>
-
-          <section className="settings-group">
-            <div className="settings-group-header">
-              <span>字体</span>
-              <small>标题和歌词字体集中管理，减少切换时的视觉打断。</small>
-            </div>
-
-            <div className="settings-field-grid settings-field-grid-compact">
-              <label className="settings-field settings-field-compact">
-                <span>标题字体</span>
-                <select
-                  className="settings-select"
-                  onChange={(event) => onChangeTitleFontPreset(event.target.value)}
-                  value={titleFontPresetId}
-                >
-                  {fontPresets.map((preset) => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.label}
-                    </option>
+                <div className="mode-option-row">
+                  {layoutModeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      className={`mode-option-button ${layoutMode === option.value ? "is-active" : ""}`}
+                      onClick={() => {
+                        onChangeLayoutMode(option.value);
+                      }}
+                      type="button"
+                    >
+                      <strong>{option.label}</strong>
+                      <small>{option.description}</small>
+                    </button>
                   ))}
-                </select>
-                <small>
-                  {fontPresets.find((preset) => preset.id === titleFontPresetId)?.description}
-                </small>
-              </label>
+                </div>
+              </section>
 
-              <label className="settings-field settings-field-compact">
-                <span>歌词字体</span>
-                <select
-                  className="settings-select"
-                  onChange={(event) => onChangeLyricFontPreset(event.target.value)}
-                  value={lyricFontPresetId}
-                >
-                  {fontPresets.map((preset) => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.label}
-                    </option>
-                  ))}
-                </select>
-                <small>
-                  {fontPresets.find((preset) => preset.id === lyricFontPresetId)?.description}
-                </small>
-              </label>
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>快捷操作</span>
+                  <small>录屏前最常用的动作都放在这里。</small>
+                </div>
 
-              <label className="settings-field settings-field-compact">
-                <span>标题本地字体文件</span>
-                <input
-                  accept=".woff,.woff2,.ttf,.otf"
-                  className="file-input"
-                  onChange={(event) => {
-                    onCustomTitleFontFileChange(event.target.files?.[0] ?? null);
-                  }}
-                  type="file"
-                />
-                <small>
-                  {customTitleFontLabel
-                    ? `当前已加载：${customTitleFontLabel}`
-                    : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
-                </small>
-              </label>
+                <div className="settings-actions">
+                  <button className="icon-button settings-action accent" onClick={onToggleFullscreen}>
+                    全屏
+                  </button>
+                  <button className="icon-button settings-action" onClick={onResetToStart}>
+                    回到开头
+                  </button>
+                </div>
+              </section>
 
-              <label className="settings-field settings-field-compact">
-                <span>歌词本地字体文件</span>
-                <input
-                  accept=".woff,.woff2,.ttf,.otf"
-                  className="file-input"
-                  onChange={(event) => {
-                    onCustomLyricFontFileChange(event.target.files?.[0] ?? null);
-                  }}
-                  type="file"
-                />
-                <small>
-                  {customLyricFontLabel
-                    ? `当前已加载：${customLyricFontLabel}`
-                    : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
-                </small>
-              </label>
-            </div>
-          </section>
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>字体</span>
+                  <small>标题和歌词字体集中管理，减少切换时的视觉打断。</small>
+                </div>
 
-          <section className="settings-group">
-            <div className="settings-group-header">
-              <span>封面生成</span>
-              <small>基于当前封面图、歌曲名和歌手，生成一张 1:1 PNG 封面。</small>
-            </div>
+                <div className="settings-field-grid settings-field-grid-compact">
+                  <label className="settings-field settings-field-compact">
+                    <span>标题字体</span>
+                    <select
+                      className="settings-select"
+                      onChange={(event) => onChangeTitleFontPreset(event.target.value)}
+                      value={titleFontPresetId}
+                    >
+                      {fontPresets.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small>
+                      {fontPresets.find((preset) => preset.id === titleFontPresetId)?.description}
+                    </small>
+                  </label>
 
-            <div className="settings-actions">
-              <button
-                className="icon-button settings-action accent"
-                disabled={isGeneratingCoverArtwork}
-                onClick={onGenerateCoverArtwork}
-                type="button"
-              >
-                {isGeneratingCoverArtwork ? "生成中..." : coverArtworkPreviewUrl ? "重新生成" : "生成预览"}
-              </button>
-              <button
-                className="icon-button settings-action"
-                disabled={!coverArtworkPreviewUrl}
-                onClick={onDownloadCoverArtwork}
-                type="button"
-              >
-                下载 PNG
-              </button>
-            </div>
+                  <label className="settings-field settings-field-compact">
+                    <span>歌词字体</span>
+                    <select
+                      className="settings-select"
+                      onChange={(event) => onChangeLyricFontPreset(event.target.value)}
+                      value={lyricFontPresetId}
+                    >
+                      {fontPresets.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small>
+                      {fontPresets.find((preset) => preset.id === lyricFontPresetId)?.description}
+                    </small>
+                  </label>
 
-            {coverArtworkError ? (
-              <small className="field-error">{coverArtworkError}</small>
-            ) : null}
+                  <label className="settings-field settings-field-compact">
+                    <span>标题本地字体文件</span>
+                    <input
+                      accept=".woff,.woff2,.ttf,.otf"
+                      className="file-input"
+                      onChange={(event) => {
+                        onCustomTitleFontFileChange(event.target.files?.[0] ?? null);
+                      }}
+                      type="file"
+                    />
+                    <small>
+                      {customTitleFontLabel
+                        ? `当前已加载：${customTitleFontLabel}`
+                        : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
+                    </small>
+                  </label>
 
-            {coverArtworkPreviewUrl ? (
-              <div className="cover-artwork-preview">
-                <img alt="Generated cover preview" className="cover-artwork-preview-image" src={coverArtworkPreviewUrl} />
-              </div>
-            ) : (
-              <div className="cover-artwork-placeholder">
-                <span>生成后会在这里预览，可直接下载。</span>
-              </div>
-            )}
-          </section>
+                  <label className="settings-field settings-field-compact">
+                    <span>歌词本地字体文件</span>
+                    <input
+                      accept=".woff,.woff2,.ttf,.otf"
+                      className="file-input"
+                      onChange={(event) => {
+                        onCustomLyricFontFileChange(event.target.files?.[0] ?? null);
+                      }}
+                      type="file"
+                    />
+                    <small>
+                      {customLyricFontLabel
+                        ? `当前已加载：${customLyricFontLabel}`
+                        : "可选本地 woff2 / ttf / otf，用来覆盖系统字体预设。"}
+                    </small>
+                  </label>
+                </div>
+              </section>
 
-          <section className="settings-group">
-            <div className="settings-group-header">
-              <span>歌词</span>
-              <small>
-                {layoutMode === "portrait"
-                  ? "控制同屏密度、字号和时间对齐。"
-                  : "延时微调用来对齐音频和歌词出现时机。"}
-              </small>
-            </div>
-
-            {layoutMode === "portrait" ? (
-              <>
-                <label className="settings-field">
-                  <span>平台适配</span>
-                  <select
-                    className="settings-select"
-                    onChange={(event) => {
-                      onChangePortraitPlatform(event.target.value as PortraitPlatform);
-                    }}
-                    value={portraitPlatform}
-                  >
-                    {portraitPlatformOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>歌词</span>
                   <small>
-                    {portraitPlatformOptions.find((option) => option.value === portraitPlatform)?.description}
+                    {layoutMode === "portrait"
+                      ? "控制同屏密度、字号和时间对齐。"
+                      : "延时微调用来对齐音频和歌词出现时机。"}
                   </small>
-                </label>
+                </div>
+
+                {layoutMode === "portrait" ? (
+                  <>
+                    <label className="settings-field">
+                      <span>平台适配</span>
+                      <select
+                        className="settings-select"
+                        onChange={(event) => {
+                          onChangePortraitPlatform(event.target.value as PortraitPlatform);
+                        }}
+                        value={portraitPlatform}
+                      >
+                        {portraitPlatformOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <small>
+                        {portraitPlatformOptions.find((option) => option.value === portraitPlatform)?.description}
+                      </small>
+                    </label>
+
+                    <label className="settings-field">
+                      <span>同屏歌词行数</span>
+                      <select
+                        className="settings-select"
+                        onChange={(event) => {
+                          onChangeLyricDensity(event.target.value as LyricDensity);
+                        }}
+                        value={lyricDensity}
+                      >
+                        {lyricDensityOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <small>
+                        {lyricDensityOptions.find((option) => option.value === lyricDensity)?.description}
+                      </small>
+                    </label>
+
+                    <label className="settings-field">
+                      <span>歌词字号</span>
+                      <input
+                        className="settings-range"
+                        max={140}
+                        min={70}
+                        onChange={(event) => {
+                          onChangeLyricFontScale(Number(event.target.value) / 100);
+                        }}
+                        step={1}
+                        type="range"
+                        value={Math.round(lyricFontScale * 100)}
+                      />
+                      <small>当前字号：{Math.round(lyricFontScale * 100)}%</small>
+                    </label>
+                  </>
+                ) : null}
 
                 <label className="settings-field">
-                  <span>同屏歌词行数</span>
-                  <select
-                    className="settings-select"
-                    onChange={(event) => {
-                      onChangeLyricDensity(event.target.value as LyricDensity);
-                    }}
-                    value={lyricDensity}
-                  >
-                    {lyricDensityOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <small>
-                    {lyricDensityOptions.find((option) => option.value === lyricDensity)?.description}
-                  </small>
-                </label>
-
-                <label className="settings-field">
-                  <span>歌词字号</span>
+                  <span>歌词延时 (ms)</span>
                   <input
-                    className="settings-range"
-                    max={140}
-                    min={70}
-                    onChange={(event) => {
-                      onChangeLyricFontScale(Number(event.target.value) / 100);
+                    aria-invalid={lyricOffsetError ? "true" : "false"}
+                    className={`offset-input ${lyricOffsetError ? "is-invalid" : ""}`}
+                    inputMode="numeric"
+                    onBlur={() => {
+                      if (lyricOffsetError) {
+                        setLyricOffsetInput(String(lyricOffsetMs));
+                      }
                     }}
-                    step={1}
-                    type="range"
-                    value={Math.round(lyricFontScale * 100)}
+                    onChange={(event) => {
+                      handleLyricOffsetChange(event.target.value);
+                    }}
+                    placeholder="例如 -250 或 300"
+                    type="text"
+                    value={lyricOffsetInput}
                   />
-                  <small>当前字号：{Math.round(lyricFontScale * 100)}%</small>
+                  <small className={lyricOffsetError ? "field-error" : undefined}>
+                    {lyricOffsetError
+                      ? lyricOffsetError
+                      : `正数会让歌词更晚出现，负数会让歌词更早出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
+                  </small>
                 </label>
-              </>
-            ) : null}
+              </section>
 
-            <label className="settings-field">
-              <span>歌词延时 (ms)</span>
-              <input
-                aria-invalid={lyricOffsetError ? "true" : "false"}
-                className={`offset-input ${lyricOffsetError ? "is-invalid" : ""}`}
-                inputMode="numeric"
-                onBlur={() => {
-                  if (lyricOffsetError) {
-                    setLyricOffsetInput(String(lyricOffsetMs));
-                  }
-                }}
-                onChange={(event) => {
-                  handleLyricOffsetChange(event.target.value);
-                }}
-                placeholder="例如 -250 或 300"
-                type="text"
-                value={lyricOffsetInput}
-              />
-              <small className={lyricOffsetError ? "field-error" : undefined}>
-                {lyricOffsetError
-                  ? lyricOffsetError
-                  : `正数会让歌词更晚出现，负数会让歌词更早出现。当前支持范围：±${MAX_LYRIC_OFFSET_MS}ms。`}
-              </small>
-            </label>
-          </section>
+              <div className="settings-shortcuts">
+                <span>快捷键</span>
+                <small>`Space` 播放/暂停，`F` 全屏，`C` 打开/关闭面板，`Esc` 关闭面板。</small>
+              </div>
+            </>
+          ) : (
+            <>
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>当前素材</span>
+                  <small>歌曲信息、音频、歌词和封面都集中放在这里管理。</small>
+                </div>
 
-          <div className="settings-shortcuts">
-            <span>快捷键</span>
-            <small>`Space` 播放/暂停，`F` 全屏，`C` 打开/关闭面板，`Esc` 关闭面板。</small>
-          </div>
+                <div className="settings-field-grid settings-field-grid-compact">
+                  <label className="settings-field settings-field-compact">
+                    <span>歌曲标题</span>
+                    <input
+                      className="text-input"
+                      onBlur={handleSongMetaBlur}
+                      onChange={(event) => {
+                        setTitleInput(event.target.value);
+                      }}
+                      type="text"
+                      value={titleInput}
+                    />
+                  </label>
+
+                  <label className="settings-field settings-field-compact">
+                    <span>歌手</span>
+                    <input
+                      className="text-input"
+                      onBlur={handleSongMetaBlur}
+                      onChange={(event) => {
+                        setArtistInput(event.target.value);
+                      }}
+                      type="text"
+                      value={artistInput}
+                    />
+                  </label>
+
+                  <label className="settings-field settings-field-compact">
+                    <span>替换音频</span>
+                    <input
+                      accept="audio/*"
+                      className="file-input"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+
+                        if (file) {
+                          onReplaceAudioFile(file);
+                          event.target.value = "";
+                        }
+                      }}
+                      type="file"
+                    />
+                    <small>重新选择后会立即替换当前播放的音频。</small>
+                  </label>
+
+                  <label className="settings-field settings-field-compact">
+                    <span>替换歌词</span>
+                    <input
+                      accept=".lrc,.yrc,.qrc,.lys,.eslrc,.ttml,text/plain,application/xml,text/xml"
+                      className="file-input"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+
+                        if (file) {
+                          void onReplaceLyricFile(file);
+                          event.target.value = "";
+                        }
+                      }}
+                      type="file"
+                    />
+                    <small>替换后会重新解析歌词，当前其它设置保持不变。</small>
+                  </label>
+
+                  <label className="settings-field settings-field-compact">
+                    <span>替换封面</span>
+                    <input
+                      accept="image/*"
+                      className="file-input"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+
+                        if (file) {
+                          onReplaceCoverFile(file);
+                          event.target.value = "";
+                        }
+                      }}
+                      type="file"
+                    />
+                    <small>封面和背景会一起更新，不需要重新进入播放页。</small>
+                  </label>
+                </div>
+              </section>
+
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>封面生成</span>
+                  <small>按平台模板生成封面图。1:1 适合小红书，4:3 和 16:9 适合 B站。</small>
+                </div>
+
+                <div className="cover-template-grid">
+                  {coverArtworkTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      className={`cover-template-card ${coverArtworkTemplateId === template.id ? "is-active" : ""}`}
+                      onClick={() => {
+                        onChangeCoverArtworkTemplate(template.id);
+                      }}
+                      type="button"
+                    >
+                      <strong>{template.label}</strong>
+                      <span>{template.platform}</span>
+                      <small>{template.description}</small>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="settings-actions">
+                  <button
+                    className="icon-button settings-action accent"
+                    disabled={isGeneratingCoverArtwork}
+                    onClick={onGenerateCoverArtwork}
+                    type="button"
+                  >
+                    {isGeneratingCoverArtwork ? "生成中..." : coverArtworkPreviewUrl ? "重新生成" : "生成预览"}
+                  </button>
+                  <button
+                    className="icon-button settings-action"
+                    disabled={!coverArtworkPreviewUrl}
+                    onClick={onDownloadCoverArtwork}
+                    type="button"
+                  >
+                    下载 PNG
+                  </button>
+                </div>
+
+                {coverArtworkError ? (
+                  <small className="field-error">{coverArtworkError}</small>
+                ) : null}
+
+                {coverArtworkPreviewUrl ? (
+                  <div
+                    className="cover-artwork-preview"
+                    style={
+                      {
+                        ["--cover-preview-aspect-ratio" as "--cover-preview-aspect-ratio"]:
+                          `${coverArtworkTemplates.find((template) => template.id === coverArtworkTemplateId)?.width ?? 1} / ${coverArtworkTemplates.find((template) => template.id === coverArtworkTemplateId)?.height ?? 1}`,
+                      } as React.CSSProperties
+                    }
+                  >
+                    <img alt="Generated cover preview" className="cover-artwork-preview-image" src={coverArtworkPreviewUrl} />
+                  </div>
+                ) : (
+                  <div className="cover-artwork-placeholder">
+                    <span>生成后会在这里预览，可直接下载。</span>
+                  </div>
+                )}
+              </section>
+
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>整套素材</span>
+                  <small>如果想重新选择整套音频、歌词和封面，可以回到首页重新导入。</small>
+                </div>
+
+                <div className="settings-actions">
+                  <button className="icon-button settings-action" onClick={onBackToSetup} type="button">
+                    返回素材页
+                  </button>
+                </div>
+              </section>
+            </>
+          )}
         </div>
       </div>
     </aside>

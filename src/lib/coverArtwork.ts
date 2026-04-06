@@ -4,10 +4,39 @@ interface RGBColor {
   b: number;
 }
 
+export const coverArtworkTemplates = [
+  {
+    id: "xiaohongshu-square",
+    label: "1:1",
+    platform: "小红书",
+    description: "方形海报感，适合笔记封面和社媒主图。",
+    width: 1080,
+    height: 1080,
+  },
+  {
+    id: "bilibili-standard",
+    label: "4:3",
+    platform: "B站",
+    description: "更适合横版封面，信息区更突出。",
+    width: 1440,
+    height: 1080,
+  },
+  {
+    id: "bilibili-wide",
+    label: "16:9",
+    platform: "B站",
+    description: "宽屏封面，适合视频头图和横版缩略图。",
+    width: 1920,
+    height: 1080,
+  },
+] as const;
+
+export type CoverArtworkTemplateId = (typeof coverArtworkTemplates)[number]["id"];
+
 interface CoverArtworkOptions {
   artist: string;
   coverSrc: string;
-  size?: number;
+  templateId: CoverArtworkTemplateId;
   title: string;
   titleFontFamily: string;
 }
@@ -143,25 +172,6 @@ function drawRoundedImage(
   context.restore();
 }
 
-function fitCoverRect(image: HTMLImageElement, targetSize: number) {
-  const coverRatio = image.width / image.height;
-  let drawWidth = targetSize;
-  let drawHeight = targetSize;
-
-  if (coverRatio > 1) {
-    drawHeight = targetSize / coverRatio;
-  } else {
-    drawWidth = targetSize * coverRatio;
-  }
-
-  return {
-    height: drawHeight,
-    width: drawWidth,
-    x: (targetSize - drawWidth) / 2,
-    y: (targetSize - drawHeight) / 2,
-  };
-}
-
 function wrapText(
   context: CanvasRenderingContext2D,
   text: string,
@@ -238,14 +248,161 @@ function wrapText(
   return lines;
 }
 
-export async function renderSquareCoverArtwork(options: CoverArtworkOptions) {
-  const size = options.size ?? 1080;
+function drawBackground(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  width: number,
+  height: number,
+  palette: ReturnType<typeof extractPalette>,
+) {
+  context.fillStyle = rgbToString(darken(palette.shadow, 0.18));
+  context.fillRect(0, 0, width, height);
+
+  context.save();
+  context.filter = `blur(${Math.round(height * 0.06)}px) saturate(1.18)`;
+  context.globalAlpha = 0.72;
+  context.drawImage(image, -width * 0.06, -height * 0.1, width * 1.12, height * 1.2);
+  context.restore();
+
+  const radialHighlight = context.createRadialGradient(
+    width * 0.22,
+    height * 0.18,
+    height * 0.04,
+    width * 0.22,
+    height * 0.18,
+    height * 0.7,
+  );
+  radialHighlight.addColorStop(0, rgbToString(brighten(palette.highlight, 0.2), 0.38));
+  radialHighlight.addColorStop(1, "rgba(0, 0, 0, 0)");
+  context.fillStyle = radialHighlight;
+  context.fillRect(0, 0, width, height);
+
+  const verticalOverlay = context.createLinearGradient(0, 0, 0, height);
+  verticalOverlay.addColorStop(0, rgbToString(darken(palette.base, 0.25), 0.18));
+  verticalOverlay.addColorStop(0.45, rgbToString(darken(palette.base, 0.16), 0.34));
+  verticalOverlay.addColorStop(1, rgbToString(darken(palette.shadow, 0.34), 0.92));
+  context.fillStyle = verticalOverlay;
+  context.fillRect(0, 0, width, height);
+}
+
+function drawSquareTemplate(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  width: number,
+  height: number,
+  title: string,
+  artist: string,
+  titleFontFamily: string,
+  palette: ReturnType<typeof extractPalette>,
+) {
+  const mainCoverSize = height * 0.54;
+  const mainCoverX = (width - mainCoverSize) / 2;
+  const mainCoverY = height * 0.11;
+  const textMaxWidth = width * 0.76;
+  const titleY = mainCoverY + mainCoverSize + height * 0.12;
+  const artistY = height * 0.88;
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.28)";
+  context.shadowBlur = height * 0.05;
+  context.shadowOffsetY = height * 0.02;
+  drawRoundedImage(context, image, mainCoverX, mainCoverY, mainCoverSize, mainCoverSize, height * 0.03);
+  context.restore();
+
+  context.textAlign = "center";
+  context.textBaseline = "alphabetic";
+  context.fillStyle = "rgba(255, 255, 255, 0.96)";
+  context.font = `700 ${Math.round(height * 0.064)}px ${titleFontFamily}`;
+  const titleLines = wrapText(context, title, textMaxWidth, 2);
+  const titleLineHeight = height * 0.075;
+  const titleStartY = titleY - (Math.max(0, titleLines.length - 1) * titleLineHeight) / 2;
+
+  titleLines.forEach((line, index) => {
+    context.fillText(line, width / 2, titleStartY + titleLineHeight * index, textMaxWidth);
+  });
+
+  context.fillStyle = "rgba(255, 255, 255, 0.82)";
+  context.font = `600 ${Math.round(height * 0.048)}px ${titleFontFamily}`;
+  context.fillText(artist.trim() || "Unknown Artist", width / 2, artistY, textMaxWidth);
+}
+
+function drawLandscapeTemplate(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  width: number,
+  height: number,
+  title: string,
+  artist: string,
+  titleFontFamily: string,
+  palette: ReturnType<typeof extractPalette>,
+  templateId: CoverArtworkTemplateId,
+) {
+  const isWide = templateId === "bilibili-wide";
+  const coverSize = height * (isWide ? 0.58 : 0.56);
+  const layoutInsetX = width * (isWide ? 0.06 : 0.065);
+  const contentWidth = width - layoutInsetX * 2;
+  const leftZoneWidth = contentWidth * (isWide ? 0.42 : 0.44);
+  const rightZoneWidth = contentWidth - leftZoneWidth;
+  const coverX = layoutInsetX + (leftZoneWidth - coverSize) / 2;
+  const coverY = (height - coverSize) / 2;
+  const infoX = layoutInsetX + leftZoneWidth;
+  const textMaxWidth = rightZoneWidth * (isWide ? 0.88 : 0.84);
+  const textCenterX = infoX + rightZoneWidth / 2;
+
+  const atmosphereGlow = context.createRadialGradient(
+    width * 0.68,
+    height * 0.36,
+    height * 0.08,
+    width * 0.68,
+    height * 0.36,
+    width * 0.62,
+  );
+  atmosphereGlow.addColorStop(0, rgbToString(brighten(palette.accent, 0.14), 0.12));
+  atmosphereGlow.addColorStop(0.45, rgbToString(brighten(palette.base, 0.08), 0.06));
+  atmosphereGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  context.fillStyle = atmosphereGlow;
+  context.fillRect(0, 0, width, height);
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.3)";
+  context.shadowBlur = height * 0.06;
+  context.shadowOffsetY = height * 0.02;
+  drawRoundedImage(context, image, coverX, coverY, coverSize, coverSize, height * 0.03);
+  context.restore();
+
+  context.textAlign = "center";
+  context.textBaseline = "alphabetic";
+  context.fillStyle = "rgba(255, 255, 255, 0.98)";
+  context.font = `700 ${Math.round(height * (isWide ? 0.082 : 0.086))}px ${titleFontFamily}`;
+  const titleLines = wrapText(context, title, textMaxWidth, 2);
+  const titleLineHeight = height * (isWide ? 0.092 : 0.096);
+  const artistOffset = height * 0.04;
+  const textBlockHeight = titleLineHeight * titleLines.length + artistOffset;
+  const titleY = height / 2 - textBlockHeight / 2 + titleLineHeight * 0.78;
+
+  titleLines.forEach((line, index) => {
+    context.fillText(line, textCenterX, titleY + titleLineHeight * index, textMaxWidth);
+  });
+
+  context.fillStyle = "rgba(255, 255, 255, 0.9)";
+  context.font = `600 ${Math.round(height * (isWide ? 0.05 : 0.052))}px ${titleFontFamily}`;
+  context.fillText(
+    artist.trim() || "Unknown Artist",
+    textCenterX,
+    titleY + titleLineHeight * titleLines.length + artistOffset,
+    textMaxWidth,
+  );
+}
+
+export async function renderCoverArtwork(options: CoverArtworkOptions) {
+  const template =
+    coverArtworkTemplates.find((item) => item.id === options.templateId) ?? coverArtworkTemplates[0];
   const image = await loadImage(options.coverSrc);
   await document.fonts.ready;
 
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = template.width;
+  canvas.height = template.height;
   const context = canvas.getContext("2d");
 
   if (!context) {
@@ -253,78 +410,35 @@ export async function renderSquareCoverArtwork(options: CoverArtworkOptions) {
   }
 
   const palette = extractPalette(image);
-  const mainCoverSize = size * 0.54;
-  const mainCoverX = (size - mainCoverSize) / 2;
-  const mainCoverY = size * 0.11;
-  const textMaxWidth = size * 0.76;
-  const titleY = mainCoverY + mainCoverSize + size * 0.12;
-  const artistY = size * 0.88;
+  drawBackground(context, image, template.width, template.height, palette);
 
-  context.fillStyle = rgbToString(darken(palette.shadow, 0.18));
-  context.fillRect(0, 0, size, size);
+  if (template.id === "xiaohongshu-square") {
+    drawSquareTemplate(
+      context,
+      image,
+      template.width,
+      template.height,
+      options.title,
+      options.artist,
+      options.titleFontFamily,
+      palette,
+    );
+  } else {
+    drawLandscapeTemplate(
+      context,
+      image,
+      template.width,
+      template.height,
+      options.title,
+      options.artist,
+      options.titleFontFamily,
+      palette,
+      template.id,
+    );
+  }
 
-  context.save();
-  context.filter = `blur(${Math.round(size * 0.045)}px) saturate(1.18)`;
-  context.globalAlpha = 0.72;
-  context.drawImage(image, -size * 0.08, -size * 0.08, size * 1.16, size * 1.16);
-  context.restore();
-
-  const radialHighlight = context.createRadialGradient(
-    size * 0.28,
-    size * 0.18,
-    size * 0.05,
-    size * 0.28,
-    size * 0.18,
-    size * 0.7,
-  );
-  radialHighlight.addColorStop(0, rgbToString(brighten(palette.highlight, 0.2), 0.38));
-  radialHighlight.addColorStop(1, "rgba(0, 0, 0, 0)");
-  context.fillStyle = radialHighlight;
-  context.fillRect(0, 0, size, size);
-
-  const verticalOverlay = context.createLinearGradient(0, 0, 0, size);
-  verticalOverlay.addColorStop(0, rgbToString(darken(palette.base, 0.25), 0.2));
-  verticalOverlay.addColorStop(0.42, rgbToString(darken(palette.base, 0.16), 0.36));
-  verticalOverlay.addColorStop(1, rgbToString(darken(palette.shadow, 0.34), 0.9));
-  context.fillStyle = verticalOverlay;
-  context.fillRect(0, 0, size, size);
-
-  context.save();
-  context.shadowColor = "rgba(0, 0, 0, 0.28)";
-  context.shadowBlur = size * 0.05;
-  context.shadowOffsetY = size * 0.02;
-  drawRoundedImage(context, image, mainCoverX, mainCoverY, mainCoverSize, mainCoverSize, size * 0.03);
-  context.restore();
-
-  const fitRect = fitCoverRect(image, mainCoverSize);
-  context.save();
-  context.globalAlpha = 0.08;
-  drawRoundedImage(
-    context,
-    image,
-    mainCoverX + fitRect.x,
-    mainCoverY + fitRect.y,
-    fitRect.width,
-    fitRect.height,
-    size * 0.03,
-  );
-  context.restore();
-
-  context.textAlign = "center";
-  context.textBaseline = "alphabetic";
-  context.fillStyle = "rgba(255, 255, 255, 0.96)";
-  context.font = `700 ${Math.round(size * 0.064)}px ${options.titleFontFamily}`;
-  const titleLines = wrapText(context, options.title, textMaxWidth, 2);
-  const titleLineHeight = size * 0.075;
-  const titleStartY = titleY - (Math.max(0, titleLines.length - 1) * titleLineHeight) / 2;
-
-  titleLines.forEach((line, index) => {
-    context.fillText(line, size / 2, titleStartY + titleLineHeight * index, textMaxWidth);
-  });
-
-  context.fillStyle = "rgba(255, 255, 255, 0.82)";
-  context.font = `600 ${Math.round(size * 0.048)}px ${options.titleFontFamily}`;
-  context.fillText(options.artist.trim() || "Unknown Artist", size / 2, artistY, textMaxWidth);
-
-  return canvas.toDataURL("image/png");
+  return {
+    dataUrl: canvas.toDataURL("image/png"),
+    template,
+  };
 }

@@ -8,7 +8,11 @@ import { type LayoutMode, type LyricDensity, type PortraitPlatform } from "./con
 import { SetupPage } from "./components/SetupPage";
 import { songConfig, type SongConfig } from "./config/song";
 import { useLyricVideoPlayer } from "./hooks/useLyricVideoPlayer";
-import { renderSquareCoverArtwork } from "./lib/coverArtwork";
+import {
+  coverArtworkTemplates,
+  renderCoverArtwork,
+  type CoverArtworkTemplateId,
+} from "./lib/coverArtwork";
 
 function cleanupObjectUrls(urls: string[]) {
   urls.forEach((url) => URL.revokeObjectURL(url));
@@ -65,6 +69,8 @@ function PlayerScreen(props: {
   const [coverArtworkPreviewUrl, setCoverArtworkPreviewUrl] = useState<string | null>(null);
   const [coverArtworkError, setCoverArtworkError] = useState<string | null>(null);
   const [isGeneratingCoverArtwork, setIsGeneratingCoverArtwork] = useState(false);
+  const [coverArtworkTemplateId, setCoverArtworkTemplateId] =
+    useState<CoverArtworkTemplateId>("xiaohongshu-square");
   const {
     audioRef,
     currentTimeMs,
@@ -175,7 +181,7 @@ function PlayerScreen(props: {
   useEffect(() => {
     setCoverArtworkPreviewUrl(null);
     setCoverArtworkError(null);
-  }, [config.artist, config.coverPath, config.title, resolvedTitleFontFamily]);
+  }, [config.artist, config.coverPath, config.title, coverArtworkTemplateId, resolvedTitleFontFamily]);
 
   const handleToggleFullscreen = useCallback(async () => {
     if (document.fullscreenElement) {
@@ -229,20 +235,21 @@ function PlayerScreen(props: {
     setCoverArtworkError(null);
 
     try {
-      const previewUrl = await renderSquareCoverArtwork({
+      const { dataUrl } = await renderCoverArtwork({
         artist: config.artist,
         coverSrc: config.coverPath,
+        templateId: coverArtworkTemplateId,
         title: config.title,
         titleFontFamily: resolvedTitleFontFamily,
       });
 
-      setCoverArtworkPreviewUrl(previewUrl);
+      setCoverArtworkPreviewUrl(dataUrl);
     } catch (error) {
       setCoverArtworkError(error instanceof Error ? error.message : "生成封面失败，请稍后再试。");
     } finally {
       setIsGeneratingCoverArtwork(false);
     }
-  }, [config.artist, config.coverPath, config.title, resolvedTitleFontFamily]);
+  }, [config.artist, config.coverPath, config.title, coverArtworkTemplateId, resolvedTitleFontFamily]);
 
   const handleDownloadCoverArtwork = useCallback(() => {
     if (!coverArtworkPreviewUrl) {
@@ -252,10 +259,12 @@ function PlayerScreen(props: {
     const link = document.createElement("a");
     const title = sanitizeFileNamePart(config.title) || "cover";
     const artist = sanitizeFileNamePart(config.artist) || "artist";
+    const templateLabel =
+      coverArtworkTemplates.find((item) => item.id === coverArtworkTemplateId)?.label ?? "1x1";
     link.href = coverArtworkPreviewUrl;
-    link.download = `${title} - ${artist}.png`;
+    link.download = `${title} - ${artist} - ${templateLabel}.png`;
     link.click();
-  }, [config.artist, config.title, coverArtworkPreviewUrl]);
+  }, [config.artist, config.title, coverArtworkPreviewUrl, coverArtworkTemplateId]);
 
   return (
     <main
@@ -293,6 +302,8 @@ function PlayerScreen(props: {
           artist={config.artist}
           coverArtworkError={coverArtworkError}
           coverArtworkPreviewUrl={coverArtworkPreviewUrl}
+          coverArtworkTemplateId={coverArtworkTemplateId}
+          coverArtworkTemplates={coverArtworkTemplates}
           customLyricFontLabel={customLyricFontLabel}
           customTitleFontLabel={customTitleFontLabel}
           isGeneratingCoverArtwork={isGeneratingCoverArtwork}
@@ -308,6 +319,7 @@ function PlayerScreen(props: {
           onChangeLyricFontPreset={setLyricFontPresetId}
           onChangeLyricFontScale={setLyricFontScale}
           onChangeTitleFontPreset={setTitleFontPresetId}
+          onChangeCoverArtworkTemplate={setCoverArtworkTemplateId}
           onDownloadCoverArtwork={handleDownloadCoverArtwork}
           onCustomLyricFontFileChange={(file) => {
             void handleCustomFontFileChange(file, "lyric");
