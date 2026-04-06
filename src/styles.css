@@ -94,7 +94,7 @@ small {
   --portrait-safe-bottom: 28px;
 }
 
-.app-shell-square-platform {
+.app-shell-portrait-compact {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -251,7 +251,7 @@ small {
 
 .mode-option-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
@@ -358,6 +358,35 @@ small {
 .settings-action.accent {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82));
   color: #0c0f15;
+}
+
+.cover-artwork-preview,
+.cover-artwork-placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cover-artwork-preview-image {
+  display: block;
+  width: min(100%, 260px);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 20px;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.24),
+    0 6px 12px rgba(0, 0, 0, 0.12);
+}
+
+.cover-artwork-placeholder span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.5;
 }
 
 .settings-field-grid {
@@ -651,17 +680,17 @@ small {
   min-width: 0;
 }
 
-.app-shell-square-platform .stage-grid {
+.app-shell-portrait-compact .stage-grid {
   gap: 16px;
 }
 
-.app-shell-square-platform .stage-top {
+.app-shell-portrait-compact .stage-top {
   grid-template-columns: 92px minmax(0, 1fr);
   gap: 14px;
   align-items: center;
 }
 
-.app-shell-square-platform .stage-lyrics {
+.app-shell-portrait-compact .stage-lyrics {
   overflow: hidden;
 }
 
@@ -688,7 +717,7 @@ small {
   align-items: center;
 }
 
-.app-shell-square-platform .cover-art {
+.app-shell-portrait-compact .cover-art {
   border-radius: 18px;
 }
 
@@ -756,7 +785,7 @@ small {
   padding-right: 10px;
 }
 
-.app-shell-square-platform .lyrics-frame {
+.app-shell-portrait-compact .lyrics-frame {
   padding-right: 0;
 }
 
@@ -798,7 +827,7 @@ small {
   mask-size: 100% 100%;
 }
 
-.app-shell-square-platform .lyrics-frame > div {
+.app-shell-portrait-compact .lyrics-frame > div {
   --amll-lyric-player-font-size: calc(
     clamp(16px, 2.8vw, 24px) *
     var(--portrait-lyric-font-scale, 1)
@@ -845,7 +874,7 @@ small {
   padding-right: 10px;
 }
 
-.app-shell-square-platform .playback-copy {
+.app-shell-portrait-compact .playback-copy {
   padding-right: 0;
 }
 
@@ -881,7 +910,7 @@ small {
   letter-spacing: -0.035em;
 }
 
-.app-shell-square-platform .playback-copy h1 {
+.app-shell-portrait-compact .playback-copy h1 {
   font-size: clamp(20px, 3.5vw, 28px);
 }
 
@@ -890,7 +919,7 @@ small {
   font-size: clamp(14px, 2.5vw, 18px);
 }
 
-.app-shell-square-platform .artist {
+.app-shell-portrait-compact .artist {
   font-size: clamp(13px, 2vw, 16px);
 }
 
@@ -913,7 +942,7 @@ small {
   padding-right: 10px;
 }
 
-.app-shell-square-platform .playback-controls {
+.app-shell-portrait-compact .playback-controls {
   padding-top: 0;
   padding-right: 0;
 }
@@ -1005,7 +1034,7 @@ small {
   padding-right: 10px;
 }
 
-.app-shell-square-platform .stage-copy {
+.app-shell-portrait-compact .stage-copy {
   padding-right: 0;
 }
 
@@ -1157,7 +1186,7 @@ small {
     gap: 14px;
   }
 
-  .app-shell-square-platform .stage-top {
+  .app-shell-portrait-compact .stage-top {
     grid-template-columns: 80px minmax(0, 1fr);
     gap: 12px;
   }

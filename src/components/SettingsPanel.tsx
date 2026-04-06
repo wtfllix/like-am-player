@@ -13,8 +13,11 @@ const MAX_LYRIC_OFFSET_MS = 10000;
 
 interface SettingsPanelProps {
   artist: string;
+  coverArtworkError: string | null;
+  coverArtworkPreviewUrl: string | null;
   customLyricFontLabel: string | null;
   customTitleFontLabel: string | null;
+  isGeneratingCoverArtwork: boolean;
   layoutMode: LayoutMode;
   lyricDensity: LyricDensity;
   lyricFontPresetId: string;
@@ -26,8 +29,10 @@ interface SettingsPanelProps {
   onChangeLyricFontPreset: (presetId: string) => void;
   onChangeLyricFontScale: (scale: number) => void;
   onChangeTitleFontPreset: (presetId: string) => void;
+  onDownloadCoverArtwork: () => void;
   onCustomLyricFontFileChange: (file: File | null) => void;
   onCustomTitleFontFileChange: (file: File | null) => void;
+  onGenerateCoverArtwork: () => void;
   onChangeLyricOffset: (offsetMs: number) => void;
   onClose: () => void;
   onReplaceAudioFile: (file: File) => void;
@@ -46,8 +51,11 @@ interface SettingsPanelProps {
 export function SettingsPanel(props: SettingsPanelProps) {
   const {
     artist,
+    coverArtworkError,
+    coverArtworkPreviewUrl,
     customLyricFontLabel,
     customTitleFontLabel,
+    isGeneratingCoverArtwork,
     layoutMode,
     lyricDensity,
     lyricFontPresetId,
@@ -59,8 +67,10 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onChangeLyricFontPreset,
     onChangeLyricFontScale,
     onChangeTitleFontPreset,
+    onDownloadCoverArtwork,
     onCustomLyricFontFileChange,
     onCustomTitleFontFileChange,
+    onGenerateCoverArtwork,
     onChangeLyricOffset,
     onClose,
     onReplaceAudioFile,
@@ -363,6 +373,46 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 </small>
               </label>
             </div>
+          </section>
+
+          <section className="settings-group">
+            <div className="settings-group-header">
+              <span>封面生成</span>
+              <small>基于当前封面图、歌曲名和歌手，生成一张 1:1 PNG 封面。</small>
+            </div>
+
+            <div className="settings-actions">
+              <button
+                className="icon-button settings-action accent"
+                disabled={isGeneratingCoverArtwork}
+                onClick={onGenerateCoverArtwork}
+                type="button"
+              >
+                {isGeneratingCoverArtwork ? "生成中..." : coverArtworkPreviewUrl ? "重新生成" : "生成预览"}
+              </button>
+              <button
+                className="icon-button settings-action"
+                disabled={!coverArtworkPreviewUrl}
+                onClick={onDownloadCoverArtwork}
+                type="button"
+              >
+                下载 PNG
+              </button>
+            </div>
+
+            {coverArtworkError ? (
+              <small className="field-error">{coverArtworkError}</small>
+            ) : null}
+
+            {coverArtworkPreviewUrl ? (
+              <div className="cover-artwork-preview">
+                <img alt="Generated cover preview" className="cover-artwork-preview-image" src={coverArtworkPreviewUrl} />
+              </div>
+            ) : (
+              <div className="cover-artwork-placeholder">
+                <span>生成后会在这里预览，可直接下载。</span>
+              </div>
+            )}
           </section>
 
           <section className="settings-group">

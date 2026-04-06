@@ -13,6 +13,10 @@ function fileNameWithoutExtension(name: string) {
   return name.replace(/\.[^.]+$/, "");
 }
 
+function getLayoutIcon(mode: LayoutMode) {
+  return mode === "landscape" ? "🖥️" : "📱";
+}
+
 export function SetupPage(props: SetupPageProps) {
   const { layoutMode, onChangeLayoutMode, onStartDemo, onStartWithConfig } = props;
   const [title, setTitle] = useState(songConfig.title);
@@ -77,7 +81,7 @@ export function SetupPage(props: SetupPageProps) {
                   type="button"
                 >
                   <span className="mode-option-icon" aria-hidden="true">
-                    {option.value === "landscape" ? "🖥️" : "📱"}
+                    {getLayoutIcon(option.value)}
                   </span>
                   <span className="mode-option-meta">
                     <strong>{option.label}</strong>

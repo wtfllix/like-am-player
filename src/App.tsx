@@ -8,6 +8,7 @@ import { type LayoutMode, type LyricDensity, type PortraitPlatform } from "./con
 import { SetupPage } from "./components/SetupPage";
 import { songConfig, type SongConfig } from "./config/song";
 import { useLyricVideoPlayer } from "./hooks/useLyricVideoPlayer";
+import { renderSquareCoverArtwork } from "./lib/coverArtwork";
 
 function cleanupObjectUrls(urls: string[]) {
   urls.forEach((url) => URL.revokeObjectURL(url));
@@ -19,6 +20,10 @@ function replaceManagedUrl(
   nextUrl: string,
 ) {
   return [...managedUrls.filter((url) => url !== previousUrl), nextUrl];
+}
+
+function sanitizeFileNamePart(value: string) {
+  return value.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function PlayerScreen(props: {
@@ -57,6 +62,9 @@ function PlayerScreen(props: {
   const [lyricFontScale, setLyricFontScale] = useState(1);
   const [lyricOffsetMs, setLyricOffsetMs] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [coverArtworkPreviewUrl, setCoverArtworkPreviewUrl] = useState<string | null>(null);
+  const [coverArtworkError, setCoverArtworkError] = useState<string | null>(null);
+  const [isGeneratingCoverArtwork, setIsGeneratingCoverArtwork] = useState(false);
   const {
     audioRef,
     currentTimeMs,
@@ -94,7 +102,7 @@ function PlayerScreen(props: {
   };
   const activeLyricDensity = lyricDensityVars[lyricDensity];
   const isPortrait = layoutMode === "portrait";
-  const isSquarePlatform = isPortrait && portraitPlatform !== "default";
+  const isCompactPortrait = isPortrait && portraitPlatform !== "default";
 
   const handleCustomFontFileChange = useCallback(async (
     file: File | null,
@@ -164,6 +172,11 @@ function PlayerScreen(props: {
     setLyricOffsetMs(0);
   }, [config.audioPath, config.lyricFileName, config.lyricPath, config.lyricText]);
 
+  useEffect(() => {
+    setCoverArtworkPreviewUrl(null);
+    setCoverArtworkError(null);
+  }, [config.artist, config.coverPath, config.title, resolvedTitleFontFamily]);
+
   const handleToggleFullscreen = useCallback(async () => {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
@@ -211,9 +224,42 @@ function PlayerScreen(props: {
     };
   }, [handleToggleFullscreen, togglePlayback]);
 
+  const handleGenerateCoverArtwork = useCallback(async () => {
+    setIsGeneratingCoverArtwork(true);
+    setCoverArtworkError(null);
+
+    try {
+      const previewUrl = await renderSquareCoverArtwork({
+        artist: config.artist,
+        coverSrc: config.coverPath,
+        title: config.title,
+        titleFontFamily: resolvedTitleFontFamily,
+      });
+
+      setCoverArtworkPreviewUrl(previewUrl);
+    } catch (error) {
+      setCoverArtworkError(error instanceof Error ? error.message : "生成封面失败，请稍后再试。");
+    } finally {
+      setIsGeneratingCoverArtwork(false);
+    }
+  }, [config.artist, config.coverPath, config.title, resolvedTitleFontFamily]);
+
+  const handleDownloadCoverArtwork = useCallback(() => {
+    if (!coverArtworkPreviewUrl) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    const title = sanitizeFileNamePart(config.title) || "cover";
+    const artist = sanitizeFileNamePart(config.artist) || "artist";
+    link.href = coverArtworkPreviewUrl;
+    link.download = `${title} - ${artist}.png`;
+    link.click();
+  }, [config.artist, config.title, coverArtworkPreviewUrl]);
+
   return (
     <main
-      className={`app-shell ${isPortrait ? "app-shell-portrait app-shell-portrait-platform-" + portraitPlatform : ""} ${isSquarePlatform ? "app-shell-square-platform" : ""}`}
+      className={`app-shell ${isPortrait ? "app-shell-portrait app-shell-portrait-platform-" + portraitPlatform : ""} ${isCompactPortrait ? "app-shell-portrait-compact" : ""}`}
       style={
         {
           fontFamily: resolvedLyricFontFamily,
@@ -242,11 +288,14 @@ function PlayerScreen(props: {
         <div className="background-overlay" />
       </div>
 
-      <section className={`content-shell ${isPortrait ? "content-shell-portrait" : ""} ${isSquarePlatform ? "content-shell-portrait-square" : ""}`}>
+      <section className={`content-shell ${isPortrait ? "content-shell-portrait" : ""} ${isCompactPortrait ? "content-shell-portrait-square" : ""}`}>
         <SettingsPanel
           artist={config.artist}
+          coverArtworkError={coverArtworkError}
+          coverArtworkPreviewUrl={coverArtworkPreviewUrl}
           customLyricFontLabel={customLyricFontLabel}
           customTitleFontLabel={customTitleFontLabel}
+          isGeneratingCoverArtwork={isGeneratingCoverArtwork}
           layoutMode={layoutMode}
           lyricDensity={lyricDensity}
           lyricFontPresetId={lyricFontPresetId}
@@ -259,11 +308,15 @@ function PlayerScreen(props: {
           onChangeLyricFontPreset={setLyricFontPresetId}
           onChangeLyricFontScale={setLyricFontScale}
           onChangeTitleFontPreset={setTitleFontPresetId}
+          onDownloadCoverArtwork={handleDownloadCoverArtwork}
           onCustomLyricFontFileChange={(file) => {
             void handleCustomFontFileChange(file, "lyric");
           }}
           onCustomTitleFontFileChange={(file) => {
             void handleCustomFontFileChange(file, "title");
+          }}
+          onGenerateCoverArtwork={() => {
+            void handleGenerateCoverArtwork();
           }}
           onChangeLyricOffset={setLyricOffsetMs}
           onClose={() => {
