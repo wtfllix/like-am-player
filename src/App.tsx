@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { BackgroundRender, LyricPlayer } from "@applemusic-like-lyrics/react";
 import { PlaybackDock } from "./components/PlaybackDock";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { defaultFontPreset, fontPresets } from "./config/fonts";
 import { type LayoutMode, type LyricDensity, type PortraitPlatform } from "./config/layout";
-import { SetupPage } from "./components/SetupPage";
 import { songConfig, type SongConfig } from "./config/song";
 import { useLyricVideoPlayer } from "./hooks/useLyricVideoPlayer";
 import {
@@ -13,6 +12,23 @@ import {
   renderCoverArtwork,
   type CoverArtworkTemplateId,
 } from "./lib/coverArtwork";
+import {
+  defaultProjectEditorState,
+  exportProjectArchive,
+  loadProjectArchive,
+  type ProjectEditorState,
+} from "./lib/projectArchive";
+
+type WorkspaceModule = "project" | "assets" | "lyrics" | "layout" | "cover" | "save";
+
+const workspaceModules: Array<{ id: WorkspaceModule; label: string }> = [
+  { id: "project", label: "新建/载入" },
+  { id: "assets", label: "素材管理" },
+  { id: "lyrics", label: "歌词同步与样式" },
+  { id: "layout", label: "画幅与布局" },
+  { id: "cover", label: "封面生成" },
+  { id: "save", label: "保存项目" },
+];
 
 function cleanupObjectUrls(urls: string[]) {
   urls.forEach((url) => URL.revokeObjectURL(url));
@@ -32,11 +48,24 @@ function sanitizeFileNamePart(value: string) {
 
 function PlayerScreen(props: {
   config: SongConfig;
+  initialCustomFonts: {
+    lyric: File | null;
+    title: File | null;
+  };
+  initialEditorState: ProjectEditorState;
+  initialEditorStateVersion: number;
+  sourceFiles: {
+    audio: File | null;
+    cover: File | null;
+    lyric: File | null;
+  };
   layoutMode: LayoutMode;
   portraitPlatform: PortraitPlatform;
   onBackToSetup: () => void;
+  onCreateProject: () => void;
   onChangeLayoutMode: (mode: LayoutMode) => void;
   onChangePortraitPlatform: (platform: PortraitPlatform) => void;
+  onLoadProjectFile: (file: File) => Promise<void>;
   onReplaceAudioFile: (file: File) => void;
   onReplaceCoverFile: (file: File) => void;
   onReplaceLyricFile: (file: File) => Promise<void>;
@@ -44,10 +73,16 @@ function PlayerScreen(props: {
 }) {
   const {
     config,
+    initialCustomFonts,
+    initialEditorState,
+    initialEditorStateVersion,
+    sourceFiles,
     layoutMode,
     onBackToSetup,
+    onCreateProject,
     onChangeLayoutMode,
     onChangePortraitPlatform,
+    onLoadProjectFile,
     onReplaceAudioFile,
     onReplaceCoverFile,
     onReplaceLyricFile,
@@ -65,12 +100,16 @@ function PlayerScreen(props: {
   const [lyricDensity, setLyricDensity] = useState<LyricDensity>("medium");
   const [lyricFontScale, setLyricFontScale] = useState(1);
   const [lyricOffsetMs, setLyricOffsetMs] = useState(0);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [coverArtworkPreviewUrl, setCoverArtworkPreviewUrl] = useState<string | null>(null);
   const [coverArtworkError, setCoverArtworkError] = useState<string | null>(null);
   const [isGeneratingCoverArtwork, setIsGeneratingCoverArtwork] = useState(false);
   const [coverArtworkTemplateId, setCoverArtworkTemplateId] =
     useState<CoverArtworkTemplateId>("xiaohongshu-square");
+  const [activeWorkspaceModule, setActiveWorkspaceModule] = useState<WorkspaceModule | null>(null);
+  const [projectBusyAction, setProjectBusyAction] = useState<"export" | "load" | null>(null);
+  const [projectActionMessage, setProjectActionMessage] = useState<string | null>(null);
+  const [projectActionError, setProjectActionError] = useState<string | null>(null);
+  const shellRef = useRef<HTMLElement | null>(null);
   const {
     audioRef,
     currentTimeMs,
@@ -183,13 +222,46 @@ function PlayerScreen(props: {
     setCoverArtworkError(null);
   }, [config.artist, config.coverPath, config.title, coverArtworkTemplateId, resolvedTitleFontFamily]);
 
+  useEffect(() => {
+    setTitleFontPresetId(initialEditorState.titleFontPresetId);
+    setLyricFontPresetId(initialEditorState.lyricFontPresetId);
+    setLyricDensity(initialEditorState.lyricDensity);
+    setLyricFontScale(initialEditorState.lyricFontScale);
+    setLyricOffsetMs(initialEditorState.lyricOffsetMs);
+    setCoverArtworkTemplateId(initialEditorState.coverArtworkTemplateId);
+    onChangeLayoutMode(initialEditorState.layoutMode);
+    onChangePortraitPlatform(initialEditorState.portraitPlatform);
+    setProjectActionError(null);
+    setProjectActionMessage(null);
+    setActiveWorkspaceModule(null);
+
+    void handleCustomFontFileChange(null, "title");
+    void handleCustomFontFileChange(null, "lyric");
+
+    if (initialCustomFonts.title) {
+      void handleCustomFontFileChange(initialCustomFonts.title, "title");
+    }
+
+    if (initialCustomFonts.lyric) {
+      void handleCustomFontFileChange(initialCustomFonts.lyric, "lyric");
+    }
+  }, [
+    handleCustomFontFileChange,
+    initialCustomFonts.lyric,
+    initialCustomFonts.title,
+    initialEditorState,
+    initialEditorStateVersion,
+    onChangeLayoutMode,
+    onChangePortraitPlatform,
+  ]);
+
   const handleToggleFullscreen = useCallback(async () => {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
       return;
     }
 
-    await document.documentElement.requestFullscreen();
+    await shellRef.current?.requestFullscreen();
   }, []);
 
   useEffect(() => {
@@ -215,11 +287,11 @@ function PlayerScreen(props: {
 
       if (event.key.toLowerCase() === "c") {
         event.preventDefault();
-        setIsSettingsOpen((value) => !value);
+        setActiveWorkspaceModule((current) => (current === "lyrics" ? null : "lyrics"));
       }
 
       if (event.key === "Escape") {
-        setIsSettingsOpen(false);
+        setActiveWorkspaceModule(null);
       }
     };
 
@@ -266,9 +338,97 @@ function PlayerScreen(props: {
     link.click();
   }, [config.artist, config.title, coverArtworkPreviewUrl, coverArtworkTemplateId]);
 
+  const handleExportProject = useCallback(async () => {
+    setProjectBusyAction("export");
+    setProjectActionError(null);
+    setProjectActionMessage(null);
+
+    try {
+      const titleFontFile = customTitleFontUrl && customTitleFontLabel
+        ? new File(
+          [await fetch(customTitleFontUrl).then(async (response) => response.blob())],
+          customTitleFontLabel,
+        )
+        : null;
+      const lyricFontFile = customLyricFontUrl && customLyricFontLabel
+        ? new File(
+          [await fetch(customLyricFontUrl).then(async (response) => response.blob())],
+          customLyricFontLabel,
+        )
+        : null;
+      const coverPreviewBlob = coverArtworkPreviewUrl
+        ? await fetch(coverArtworkPreviewUrl).then(async (response) => response.blob())
+        : null;
+      const { blob, fileName } = await exportProjectArchive({
+        config,
+        customFonts: {
+          lyric: lyricFontFile,
+          title: titleFontFile,
+        },
+        sourceFiles,
+        settings: {
+          coverArtworkTemplateId,
+          layoutMode,
+          lyricDensity,
+          lyricFontPresetId,
+          lyricFontScale,
+          lyricOffsetMs,
+          portraitPlatform,
+          titleFontPresetId,
+        },
+        sourceCoverPreview: coverPreviewBlob,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      setProjectActionMessage("项目已导出为 .amlv.zip。");
+    } catch (error) {
+      setProjectActionError(error instanceof Error ? error.message : "保存项目失败。");
+    } finally {
+      setProjectBusyAction(null);
+    }
+  }, [
+    config,
+    coverArtworkPreviewUrl,
+    coverArtworkTemplateId,
+    customLyricFontLabel,
+    customLyricFontUrl,
+    customTitleFontLabel,
+    customTitleFontUrl,
+    layoutMode,
+    lyricDensity,
+    lyricFontPresetId,
+    lyricFontScale,
+    lyricOffsetMs,
+    portraitPlatform,
+    sourceFiles,
+    titleFontPresetId,
+  ]);
+
+  const handleLoadProject = useCallback(async (file: File) => {
+    setProjectBusyAction("load");
+    setProjectActionError(null);
+    setProjectActionMessage(null);
+
+    try {
+      await onLoadProjectFile(file);
+      setProjectActionMessage("项目已载入，可以继续编辑。");
+      setActiveWorkspaceModule(null);
+    } catch (error) {
+      setProjectActionError(error instanceof Error ? error.message : "载入项目失败。");
+    } finally {
+      setProjectBusyAction(null);
+    }
+  }, [onLoadProjectFile]);
+
   return (
     <main
       className={`app-shell ${isPortrait ? "app-shell-portrait app-shell-portrait-platform-" + portraitPlatform : ""} ${isCompactPortrait ? "app-shell-portrait-compact" : ""}`}
+      ref={shellRef}
       style={
         {
           fontFamily: resolvedLyricFontFamily,
@@ -297,57 +457,111 @@ function PlayerScreen(props: {
         <div className="background-overlay" />
       </div>
 
-      <section className={`content-shell ${isPortrait ? "content-shell-portrait" : ""} ${isCompactPortrait ? "content-shell-portrait-square" : ""}`}>
-        <SettingsPanel
-          artist={config.artist}
-          coverArtworkError={coverArtworkError}
-          coverArtworkPreviewUrl={coverArtworkPreviewUrl}
-          coverArtworkTemplateId={coverArtworkTemplateId}
-          coverArtworkTemplates={coverArtworkTemplates}
-          customLyricFontLabel={customLyricFontLabel}
-          customTitleFontLabel={customTitleFontLabel}
-          isGeneratingCoverArtwork={isGeneratingCoverArtwork}
-          layoutMode={layoutMode}
-          lyricDensity={lyricDensity}
-          lyricFontPresetId={lyricFontPresetId}
-          lyricFontScale={lyricFontScale}
-          lyricOffsetMs={lyricOffsetMs}
-          onBackToSetup={onBackToSetup}
-          onChangeLayoutMode={onChangeLayoutMode}
-          onChangePortraitPlatform={onChangePortraitPlatform}
-          onChangeLyricDensity={setLyricDensity}
-          onChangeLyricFontPreset={setLyricFontPresetId}
-          onChangeLyricFontScale={setLyricFontScale}
-          onChangeTitleFontPreset={setTitleFontPresetId}
-          onChangeCoverArtworkTemplate={setCoverArtworkTemplateId}
-          onDownloadCoverArtwork={handleDownloadCoverArtwork}
-          onCustomLyricFontFileChange={(file) => {
-            void handleCustomFontFileChange(file, "lyric");
-          }}
-          onCustomTitleFontFileChange={(file) => {
-            void handleCustomFontFileChange(file, "title");
-          }}
-          onGenerateCoverArtwork={() => {
-            void handleGenerateCoverArtwork();
-          }}
-          onChangeLyricOffset={setLyricOffsetMs}
-          onClose={() => {
-            setIsSettingsOpen(false);
-          }}
-          onReplaceAudioFile={onReplaceAudioFile}
-          onReplaceCoverFile={onReplaceCoverFile}
-          onReplaceLyricFile={onReplaceLyricFile}
-          onResetToStart={resetToStart}
-          onToggleFullscreen={() => {
-            void handleToggleFullscreen();
-          }}
-          onUpdateSongMeta={onUpdateSongMeta}
-          open={isSettingsOpen}
-          portraitPlatform={portraitPlatform}
-          title={config.title}
-          titleFontPresetId={titleFontPresetId}
-        />
+      <div className="workspace-chrome">
+        <aside className="workspace-sidepanel">
+          <div className="workspace-product-title">Apple Music Lyric Video</div>
 
+          {activeWorkspaceModule === null ? (
+            <div className="workspace-menu">
+              <nav className="workspace-menu-nav" aria-label="平台模块">
+                {workspaceModules.map((module) => (
+                  <button
+                    key={module.id}
+                    className="workspace-menu-item"
+                    onClick={() => {
+                      setActiveWorkspaceModule(module.id);
+                    }}
+                    type="button"
+                  >
+                    {module.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          ) : (
+            <SettingsPanel
+              activeModule={activeWorkspaceModule}
+              artist={config.artist}
+              coverArtworkError={coverArtworkError}
+              coverArtworkPreviewUrl={coverArtworkPreviewUrl}
+              coverArtworkTemplateId={coverArtworkTemplateId}
+              coverArtworkTemplates={coverArtworkTemplates}
+              customLyricFontLabel={customLyricFontLabel}
+              customTitleFontLabel={customTitleFontLabel}
+              isGeneratingCoverArtwork={isGeneratingCoverArtwork}
+              layoutMode={layoutMode}
+              lyricDensity={lyricDensity}
+              lyricFontPresetId={lyricFontPresetId}
+              lyricFontScale={lyricFontScale}
+              lyricOffsetMs={lyricOffsetMs}
+              onBackToSetup={onBackToSetup}
+              onCreateProject={onCreateProject}
+              onChangeLayoutMode={onChangeLayoutMode}
+              onChangePortraitPlatform={onChangePortraitPlatform}
+              onChangeLyricDensity={setLyricDensity}
+              onChangeLyricFontPreset={setLyricFontPresetId}
+              onChangeLyricFontScale={setLyricFontScale}
+              onChangeTitleFontPreset={setTitleFontPresetId}
+              onChangeCoverArtworkTemplate={setCoverArtworkTemplateId}
+              onDownloadCoverArtwork={handleDownloadCoverArtwork}
+              onExportProject={handleExportProject}
+              onCustomLyricFontFileChange={(file) => {
+                void handleCustomFontFileChange(file, "lyric");
+              }}
+              onCustomTitleFontFileChange={(file) => {
+                void handleCustomFontFileChange(file, "title");
+              }}
+              onGenerateCoverArtwork={() => {
+                void handleGenerateCoverArtwork();
+              }}
+              onChangeLyricOffset={setLyricOffsetMs}
+              onClose={() => {
+                setActiveWorkspaceModule(null);
+              }}
+              onLoadProjectFile={handleLoadProject}
+              onReplaceAudioFile={onReplaceAudioFile}
+              onReplaceCoverFile={onReplaceCoverFile}
+              onReplaceLyricFile={onReplaceLyricFile}
+              onResetToStart={resetToStart}
+              onToggleFullscreen={() => {
+                void handleToggleFullscreen();
+              }}
+              onUpdateSongMeta={onUpdateSongMeta}
+              open
+              placement="inline"
+              portraitPlatform={portraitPlatform}
+              projectActionError={projectActionError}
+              projectActionMessage={projectActionMessage}
+              projectBusyAction={projectBusyAction}
+              title={config.title}
+              titleFontPresetId={titleFontPresetId}
+            />
+          )}
+        </aside>
+
+        <header className="workspace-topbar">
+          <div className="workspace-topbar-copy">
+            <strong>{config.title}</strong>
+            <span>{config.artist}</span>
+          </div>
+
+          <div className="workspace-topbar-actions">
+            <span className="workspace-pill">{layoutMode === "portrait" ? "竖屏" : "横屏"}</span>
+            <button className="icon-button subtle compact" onClick={() => {
+              void togglePlayback();
+            }}>
+              {isPlaying ? "暂停" : "播放"}
+            </button>
+            <button className="icon-button subtle compact" onClick={() => {
+              void handleToggleFullscreen();
+            }}>
+              全屏
+            </button>
+          </div>
+        </header>
+      </div>
+
+      <section className={`content-shell content-shell-workspace ${isPortrait ? "content-shell-portrait" : ""} ${isCompactPortrait ? "content-shell-portrait-square" : ""}`}>
         <div className="lyrics-panel">
           <div className="stage-grid">
             {isPortrait ? (
@@ -368,9 +582,6 @@ function PlayerScreen(props: {
 
                 <div className="stage-lyrics">
                   <div className="lyrics-frame">
-                    {/* AMLL 的歌词播放器在这里接入。
-                        当前会把音频时间持续转换成毫秒传给 currentTime。
-                        如果以后换成逐词歌词，只要歌词文件本身有更细粒度时间信息，这里基本不用重写。 */}
                     <LyricPlayer
                       alignAnchor="center"
                       alignPosition={0.5}
@@ -396,9 +607,6 @@ function PlayerScreen(props: {
                 </aside>
 
                 <div className="lyrics-frame">
-                  {/* AMLL 的歌词播放器在这里接入。
-                      当前会把音频时间持续转换成毫秒传给 currentTime。
-                      如果以后换成逐词歌词，只要歌词文件本身有更细粒度时间信息，这里基本不用重写。 */}
                   <LyricPlayer
                     alignAnchor="center"
                     alignPosition={0.5}
@@ -434,18 +642,25 @@ function PlayerScreen(props: {
 }
 
 export default function App() {
-  const [activeConfig, setActiveConfig] = useState<SongConfig | null>(null);
+  const [activeConfig, setActiveConfig] = useState<SongConfig | null>(songConfig);
   const [generatedUrls, setGeneratedUrls] = useState<string[]>([]);
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>("landscape");
-  const [portraitPlatform, setPortraitPlatform] = useState<PortraitPlatform>("default");
-
-  useEffect(() => {
-    document.body.classList.toggle("setup-mode", !activeConfig);
-
-    return () => {
-      document.body.classList.remove("setup-mode");
-    };
-  }, [activeConfig]);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(defaultProjectEditorState.layoutMode);
+  const [portraitPlatform, setPortraitPlatform] = useState<PortraitPlatform>(defaultProjectEditorState.portraitPlatform);
+  const [initialEditorState, setInitialEditorState] = useState<ProjectEditorState>(defaultProjectEditorState);
+  const [initialEditorStateVersion, setInitialEditorStateVersion] = useState(0);
+  const [initialCustomFonts, setInitialCustomFonts] = useState<{ lyric: File | null; title: File | null }>({
+    lyric: null,
+    title: null,
+  });
+  const [sourceFiles, setSourceFiles] = useState<{
+    audio: File | null;
+    cover: File | null;
+    lyric: File | null;
+  }>({
+    audio: null,
+    cover: null,
+    lyric: null,
+  });
 
   useEffect(() => {
     return () => {
@@ -453,10 +668,27 @@ export default function App() {
     };
   }, [generatedUrls]);
 
+  const resetEditorState = (nextEditorState: ProjectEditorState = defaultProjectEditorState) => {
+    setInitialEditorState(nextEditorState);
+    setInitialCustomFonts({
+      lyric: null,
+      title: null,
+    });
+    setSourceFiles({
+      audio: null,
+      cover: null,
+      lyric: null,
+    });
+    setLayoutMode(nextEditorState.layoutMode);
+    setPortraitPlatform(nextEditorState.portraitPlatform);
+    setInitialEditorStateVersion((current) => current + 1);
+  };
+
   const handleStartDemo = () => {
     cleanupObjectUrls(generatedUrls);
     setGeneratedUrls([]);
     setActiveConfig(songConfig);
+    resetEditorState();
   };
 
   const handleStartWithConfig = (config: SongConfig, objectUrls: string[]) => {
@@ -466,7 +698,14 @@ export default function App() {
   };
 
   const handleBackToSetup = () => {
-    setActiveConfig(null);
+    cleanupObjectUrls(generatedUrls);
+    setGeneratedUrls([]);
+    setActiveConfig(songConfig);
+    resetEditorState();
+  };
+
+  const handleCreateProject = () => {
+    handleBackToSetup();
   };
 
   const handleUpdateSongMeta = (patch: Pick<SongConfig, "title" | "artist">) => {
@@ -508,7 +747,10 @@ export default function App() {
         audioPath: nextAudioPath,
       };
     });
-
+    setSourceFiles((current) => ({
+      ...current,
+      audio: file,
+    }));
   };
 
   const handleReplaceCoverFile = (file: File) => {
@@ -537,6 +779,10 @@ export default function App() {
         coverPath: nextCoverPath,
       };
     });
+    setSourceFiles((current) => ({
+      ...current,
+      cover: file,
+    }));
   };
 
   const handleReplaceLyricFile = async (file: File) => {
@@ -554,33 +800,39 @@ export default function App() {
         lyricText,
       };
     });
+    setSourceFiles((current) => ({
+      ...current,
+      lyric: file,
+    }));
   };
 
-  if (!activeConfig) {
-    return (
-      <main className="app-shell app-shell-setup">
-        <div className="background-stack" aria-hidden="true">
-          <img alt="" className="background-cover" src={songConfig.coverPath} />
-          <div className="background-vignette" />
-          <div className="background-overlay" />
-        </div>
-        <SetupPage
-          layoutMode={layoutMode}
-          onChangeLayoutMode={setLayoutMode}
-          onStartDemo={handleStartDemo}
-          onStartWithConfig={handleStartWithConfig}
-        />
-      </main>
-    );
-  }
+  const handleLoadProjectFile = async (file: File) => {
+    const loadedProject = await loadProjectArchive(file);
+
+    cleanupObjectUrls(generatedUrls);
+    setGeneratedUrls(loadedProject.managedUrls);
+    setActiveConfig(loadedProject.config);
+    setInitialEditorState(loadedProject.settings);
+    setInitialCustomFonts(loadedProject.customFonts);
+    setSourceFiles(loadedProject.sourceFiles);
+    setLayoutMode(loadedProject.settings.layoutMode);
+    setPortraitPlatform(loadedProject.settings.portraitPlatform);
+    setInitialEditorStateVersion((current) => current + 1);
+  };
 
   return (
     <PlayerScreen
-      config={activeConfig}
+      config={activeConfig ?? songConfig}
+      initialCustomFonts={initialCustomFonts}
+      initialEditorState={initialEditorState}
+      initialEditorStateVersion={initialEditorStateVersion}
+      sourceFiles={sourceFiles}
       layoutMode={layoutMode}
       onBackToSetup={handleBackToSetup}
+      onCreateProject={handleCreateProject}
       onChangeLayoutMode={setLayoutMode}
       onChangePortraitPlatform={setPortraitPlatform}
+      onLoadProjectFile={handleLoadProjectFile}
       onReplaceAudioFile={handleReplaceAudioFile}
       onReplaceCoverFile={handleReplaceCoverFile}
       onReplaceLyricFile={handleReplaceLyricFile}

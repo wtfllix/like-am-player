@@ -12,8 +12,10 @@ import type { CoverArtworkTemplateId, coverArtworkTemplates } from "../lib/cover
 
 const MAX_LYRIC_OFFSET_MS = 10000;
 type SettingsSection = "playback" | "assets";
+type WorkspaceModule = "project" | "assets" | "lyrics" | "layout" | "cover" | "save";
 
 interface SettingsPanelProps {
+  activeModule: WorkspaceModule | null;
   artist: string;
   coverArtworkError: string | null;
   coverArtworkPreviewUrl: string | null;
@@ -28,6 +30,7 @@ interface SettingsPanelProps {
   lyricFontScale: number;
   lyricOffsetMs: number;
   onBackToSetup: () => void;
+  onCreateProject: () => void;
   onChangeLayoutMode: (mode: LayoutMode) => void;
   onChangeLyricDensity: (density: LyricDensity) => void;
   onChangeLyricFontPreset: (presetId: string) => void;
@@ -35,18 +38,24 @@ interface SettingsPanelProps {
   onChangeCoverArtworkTemplate: (templateId: CoverArtworkTemplateId) => void;
   onChangeTitleFontPreset: (presetId: string) => void;
   onDownloadCoverArtwork: () => void;
+  onExportProject: () => Promise<void>;
   onCustomLyricFontFileChange: (file: File | null) => void;
   onCustomTitleFontFileChange: (file: File | null) => void;
   onGenerateCoverArtwork: () => void;
   onChangeLyricOffset: (offsetMs: number) => void;
   onClose: () => void;
+  onLoadProjectFile: (file: File) => Promise<void>;
   onReplaceAudioFile: (file: File) => void;
   onReplaceCoverFile: (file: File) => void;
   onReplaceLyricFile: (file: File) => Promise<void>;
   onResetToStart: () => void;
   onToggleFullscreen: () => void;
   open: boolean;
+  placement?: "inline" | "right";
   portraitPlatform: PortraitPlatform;
+  projectActionError: string | null;
+  projectActionMessage: string | null;
+  projectBusyAction: "export" | "load" | null;
   onChangePortraitPlatform: (platform: PortraitPlatform) => void;
   onUpdateSongMeta: (patch: { title: string; artist: string }) => void;
   title: string;
@@ -56,6 +65,7 @@ interface SettingsPanelProps {
 export function SettingsPanel(props: SettingsPanelProps) {
   const {
     artist,
+    activeModule,
     coverArtworkError,
     coverArtworkPreviewUrl,
     coverArtworkTemplateId,
@@ -69,6 +79,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
     lyricFontScale,
     lyricOffsetMs,
     onBackToSetup,
+    onCreateProject,
     onChangeLayoutMode,
     onChangeLyricDensity,
     onChangeLyricFontPreset,
@@ -76,11 +87,13 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onChangeCoverArtworkTemplate,
     onChangeTitleFontPreset,
     onDownloadCoverArtwork,
+    onExportProject,
     onCustomLyricFontFileChange,
     onCustomTitleFontFileChange,
     onGenerateCoverArtwork,
     onChangeLyricOffset,
     onClose,
+    onLoadProjectFile,
     onReplaceAudioFile,
     onReplaceCoverFile,
     onReplaceLyricFile,
@@ -89,7 +102,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onResetToStart,
     onToggleFullscreen,
     open,
+    placement = "right",
     portraitPlatform,
+    projectActionError,
+    projectActionMessage,
+    projectBusyAction,
     title,
     titleFontPresetId,
   } = props;
@@ -157,50 +174,88 @@ export function SettingsPanel(props: SettingsPanelProps) {
     });
   };
 
+  useEffect(() => {
+    if (!activeModule) {
+      return;
+    }
+
+    if (activeModule === "project" || activeModule === "assets" || activeModule === "cover" || activeModule === "save") {
+      setActiveSection("assets");
+      return;
+    }
+
+    setActiveSection("playback");
+  }, [activeModule]);
+
+  const showProjectSection = activeModule === "project";
+  const showAssetFilesSection = activeModule === "assets" || activeModule === null;
+  const showCoverSection = activeModule === "cover" || activeModule === null;
+  const showSaveSection = activeModule === "save";
+  const showLayoutSection = activeModule === "layout" || activeModule === null;
+  const showShortcutSection = activeModule === "layout" || activeModule === null;
+  const showFontSection = activeModule === "lyrics" || activeModule === null;
+  const showLyricSection = activeModule === "lyrics" || activeModule === null;
+
   return (
     <aside
       aria-hidden={!open}
-      className={`settings-panel ${open ? "is-open" : ""}`}
+      className={`settings-panel settings-panel-${placement} ${open ? "is-open" : ""}`}
     >
       <div className="settings-card">
         <div className="settings-header">
-          <div>
-            <p className="eyebrow">Playback Settings</p>
-            <h2>配置面板</h2>
+          <div className="settings-header-copy">
+            <p className="eyebrow">Workspace Panel</p>
+            <h2>
+              {activeModule === "project" ? "新建 / 载入" :
+                activeModule === "assets" ? "素材管理" :
+                activeModule === "lyrics" ? "歌词同步与样式" :
+                activeModule === "layout" ? "画幅与布局" :
+                activeModule === "cover" ? "封面生成" :
+                activeModule === "save" ? "保存项目" : "配置面板"}
+            </h2>
           </div>
-          <button className="icon-button subtle compact" onClick={onClose}>
-            关闭
-          </button>
+          {placement === "right" ? (
+            <button className="icon-button subtle compact" onClick={onClose}>
+              关闭
+            </button>
+          ) : placement === "inline" ? (
+            <button className="icon-button subtle compact" onClick={onClose} type="button">
+              返回
+            </button>
+          ) : null}
         </div>
 
-        <div className="settings-section-tabs" role="tablist" aria-label="配置分组">
-          <button
-            aria-selected={activeSection === "playback"}
-            className={`settings-section-tab ${activeSection === "playback" ? "is-active" : ""}`}
-            onClick={() => {
-              setActiveSection("playback");
-            }}
-            role="tab"
-            type="button"
-          >
-            播放设置
-          </button>
-          <button
-            aria-selected={activeSection === "assets"}
-            className={`settings-section-tab ${activeSection === "assets" ? "is-active" : ""}`}
-            onClick={() => {
-              setActiveSection("assets");
-            }}
-            role="tab"
-            type="button"
-          >
-            素材面板
-          </button>
-        </div>
+        {activeModule === null ? (
+          <div className="settings-section-tabs" role="tablist" aria-label="配置分组">
+            <button
+              aria-selected={activeSection === "playback"}
+              className={`settings-section-tab ${activeSection === "playback" ? "is-active" : ""}`}
+              onClick={() => {
+                setActiveSection("playback");
+              }}
+              role="tab"
+              type="button"
+            >
+              播放设置
+            </button>
+            <button
+              aria-selected={activeSection === "assets"}
+              className={`settings-section-tab ${activeSection === "assets" ? "is-active" : ""}`}
+              onClick={() => {
+                setActiveSection("assets");
+              }}
+              role="tab"
+              type="button"
+            >
+              素材面板
+            </button>
+          </div>
+        ) : null}
 
         <div className="settings-body">
           {activeSection === "playback" ? (
             <>
+              {showLayoutSection ? (
               <section className="settings-group">
                 <div className="settings-group-header">
                   <span>播放模式</span>
@@ -223,7 +278,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
                   ))}
                 </div>
               </section>
+              ) : null}
 
+              {showShortcutSection ? (
               <section className="settings-group">
                 <div className="settings-group-header">
                   <span>快捷操作</span>
@@ -239,7 +296,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
                   </button>
                 </div>
               </section>
+              ) : null}
 
+              {showFontSection ? (
               <section className="settings-group">
                 <div className="settings-group-header">
                   <span>字体</span>
@@ -318,7 +377,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
                   </label>
                 </div>
               </section>
+              ) : null}
 
+              {showLyricSection ? (
               <section className="settings-group">
                 <div className="settings-group-header">
                   <span>歌词</span>
@@ -414,14 +475,89 @@ export function SettingsPanel(props: SettingsPanelProps) {
                   </small>
                 </label>
               </section>
+              ) : null}
 
+              {showShortcutSection ? (
               <div className="settings-shortcuts">
                 <span>快捷键</span>
                 <small>`Space` 播放/暂停，`F` 全屏，`C` 打开/关闭面板，`Esc` 关闭面板。</small>
               </div>
+              ) : null}
             </>
           ) : (
             <>
+              {showProjectSection ? (
+              <section className="settings-group">
+                <div className="settings-group-header">
+                  <span>项目入口</span>
+                  <small>使用内置 Demo 项目开始，或载入之前保存的 `.amlv.zip` 项目包。</small>
+                </div>
+
+                <div className="settings-actions">
+                  <button className="icon-button settings-action accent" onClick={onCreateProject} type="button">
+                    使用 Demo 项目
+                  </button>
+                </div>
+
+                <label className="settings-field">
+                  <span>载入项目包</span>
+                  <input
+                    accept=".zip,.amlv.zip"
+                    className="file-input"
+                    disabled={projectBusyAction === "load"}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+
+                      if (file) {
+                        void onLoadProjectFile(file);
+                        event.target.value = "";
+                      }
+                    }}
+                    type="file"
+                  />
+                  <small>支持载入通过“保存项目”导出的单文件项目包。</small>
+                </label>
+
+                {projectActionMessage ? (
+                  <small>{projectActionMessage}</small>
+                ) : null}
+
+                {projectActionError ? (
+                  <small className="field-error">{projectActionError}</small>
+                ) : null}
+
+                <div className="settings-field-grid settings-field-grid-compact">
+                  <label className="settings-field settings-field-compact">
+                    <span>歌曲标题</span>
+                    <input
+                      className="text-input"
+                      onBlur={handleSongMetaBlur}
+                      onChange={(event) => {
+                        setTitleInput(event.target.value);
+                      }}
+                      type="text"
+                      value={titleInput}
+                    />
+                  </label>
+
+                  <label className="settings-field settings-field-compact">
+                    <span>歌手</span>
+                    <input
+                      className="text-input"
+                      onBlur={handleSongMetaBlur}
+                      onChange={(event) => {
+                        setArtistInput(event.target.value);
+                      }}
+                      type="text"
+                      value={artistInput}
+                    />
+                  </label>
+                </div>
+
+              </section>
+              ) : null}
+
+              {showAssetFilesSection ? (
               <section className="settings-group">
                 <div className="settings-group-header">
                   <span>当前素材</span>
@@ -510,7 +646,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
                   </label>
                 </div>
               </section>
+              ) : null}
 
+              {showCoverSection ? (
               <section className="settings-group">
                 <div className="settings-group-header">
                   <span>封面生成</span>
@@ -575,19 +713,59 @@ export function SettingsPanel(props: SettingsPanelProps) {
                   </div>
                 )}
               </section>
+              ) : null}
 
+              {showSaveSection ? (
               <section className="settings-group">
                 <div className="settings-group-header">
-                  <span>整套素材</span>
-                  <small>如果想重新选择整套音频、歌词和封面，可以回到首页重新导入。</small>
+                  <span>保存项目</span>
+                  <small>将当前素材、布局和关键样式参数打包成一个 `.amlv.zip` 项目文件。</small>
+                </div>
+
+                <div className="settings-field-grid settings-field-grid-compact">
+                  <div className="settings-field settings-field-compact">
+                    <span>当前项目</span>
+                    <small>{title}</small>
+                  </div>
+
+                  <div className="settings-field settings-field-compact">
+                    <span>当前歌手</span>
+                    <small>{artist}</small>
+                  </div>
+
+                  <div className="settings-field settings-field-compact">
+                    <span>当前画幅</span>
+                    <small>{layoutMode === "portrait" ? "竖屏" : "横屏"}</small>
+                  </div>
+
+                  <div className="settings-field settings-field-compact">
+                    <span>当前状态</span>
+                    <small>保存后可在“新建/载入”中继续载入编辑</small>
+                  </div>
                 </div>
 
                 <div className="settings-actions">
-                  <button className="icon-button settings-action" onClick={onBackToSetup} type="button">
-                    返回素材页
+                  <button
+                    className="icon-button settings-action accent"
+                    disabled={projectBusyAction === "export"}
+                    onClick={() => {
+                      void onExportProject();
+                    }}
+                    type="button"
+                  >
+                    {projectBusyAction === "export" ? "保存中..." : "导出项目"}
                   </button>
                 </div>
+
+                {projectActionMessage ? (
+                  <small>{projectActionMessage}</small>
+                ) : null}
+
+                {projectActionError ? (
+                  <small className="field-error">{projectActionError}</small>
+                ) : null}
               </section>
+              ) : null}
             </>
           )}
         </div>
