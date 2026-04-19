@@ -589,6 +589,7 @@ function PlayerScreen(props: {
                       enableBlur
                       enableScale
                       enableSpring
+                      key={resolvedLyricFontFamily}
                       lyricLines={lyrics}
                       playing={isPlaying}
                       style={{
@@ -614,6 +615,7 @@ function PlayerScreen(props: {
                     enableBlur
                     enableScale
                     enableSpring
+                    key={resolvedLyricFontFamily}
                     lyricLines={lyrics}
                     playing={isPlaying}
                     style={{

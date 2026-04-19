@@ -50,6 +50,17 @@ select {
   font: inherit;
 }
 
+/*
+ * Prevent caret blinking on focusable UI controls like buttons/sliders while
+ * keeping text inputs editable.
+ */
+.app-shell,
+.app-shell button,
+.app-shell [role="slider"],
+.app-shell [tabindex]:not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent;
+}
+
 button {
   border: 0;
   cursor: pointer;
