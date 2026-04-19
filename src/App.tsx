@@ -46,6 +46,30 @@ function sanitizeFileNamePart(value: string) {
   return value.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function inferFontFormat(fileName: string) {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+
+  switch (extension) {
+    case "woff2":
+      return "woff2";
+    case "woff":
+      return "woff";
+    case "ttf":
+      return "truetype";
+    case "otf":
+      return "opentype";
+    default:
+      return null;
+  }
+}
+
+function buildFontSource(fontUrl: string, fileName: string) {
+  const format = inferFontFormat(fileName);
+  const safeUrl = fontUrl.replace(/"/g, '\\"');
+
+  return format ? `url("${safeUrl}") format("${format}")` : `url("${safeUrl}")`;
+}
+
 function PlayerScreen(props: {
   config: SongConfig;
   initialCustomFonts: {
@@ -110,6 +134,13 @@ function PlayerScreen(props: {
   const [projectActionMessage, setProjectActionMessage] = useState<string | null>(null);
   const [projectActionError, setProjectActionError] = useState<string | null>(null);
   const shellRef = useRef<HTMLElement | null>(null);
+  const customTitleFontUrlRef = useRef<string | null>(null);
+  const customLyricFontUrlRef = useRef<string | null>(null);
+  const customTitleFontFaceRef = useRef<FontFace | null>(null);
+  const customLyricFontFaceRef = useRef<FontFace | null>(null);
+  const customTitleFontStyleRef = useRef<HTMLStyleElement | null>(null);
+  const customLyricFontStyleRef = useRef<HTMLStyleElement | null>(null);
+  const fontLoadVersionRef = useRef({ title: 0, lyric: 0 });
   const {
     audioRef,
     currentTimeMs,
@@ -149,47 +180,105 @@ function PlayerScreen(props: {
   const isPortrait = layoutMode === "portrait";
   const isCompactPortrait = isPortrait && portraitPlatform !== "default";
 
-  const handleCustomFontFileChange = useCallback(async (
-    file: File | null,
-    target: "title" | "lyric",
-  ) => {
-    const currentUrl = target === "title" ? customTitleFontUrl : customLyricFontUrl;
-    const fallbackStack =
-      target === "title" ? activeTitleFontPreset.fontFamily : activeLyricFontPreset.fontFamily;
+  useEffect(() => {
+    customTitleFontUrlRef.current = customTitleFontUrl;
+  }, [customTitleFontUrl]);
 
-    if (!file) {
-      if (currentUrl) {
-        URL.revokeObjectURL(currentUrl);
-      }
+  useEffect(() => {
+    customLyricFontUrlRef.current = customLyricFontUrl;
+  }, [customLyricFontUrl]);
 
-      if (target === "title") {
-        setCustomTitleFontFamily(null);
-        setCustomTitleFontLabel(null);
-        setCustomTitleFontUrl(null);
-      } else {
-        setCustomLyricFontFamily(null);
-        setCustomLyricFontLabel(null);
-        setCustomLyricFontUrl(null);
-      }
-      return;
+  const cleanupCustomFont = useCallback((target: "title" | "lyric") => {
+    const currentFontFaceRef = target === "title" ? customTitleFontFaceRef : customLyricFontFaceRef;
+    const currentStyleRef = target === "title" ? customTitleFontStyleRef : customLyricFontStyleRef;
+    const currentUrl = target === "title" ? customTitleFontUrlRef.current : customLyricFontUrlRef.current;
+
+    if (currentFontFaceRef.current) {
+      document.fonts.delete(currentFontFaceRef.current);
+      currentFontFaceRef.current = null;
     }
+
+    currentStyleRef.current?.remove();
+    currentStyleRef.current = null;
 
     if (currentUrl) {
       URL.revokeObjectURL(currentUrl);
     }
 
+    if (target === "title") {
+      customTitleFontUrlRef.current = null;
+      setCustomTitleFontFamily(null);
+      setCustomTitleFontLabel(null);
+      setCustomTitleFontUrl(null);
+    } else {
+      customLyricFontUrlRef.current = null;
+      setCustomLyricFontFamily(null);
+      setCustomLyricFontLabel(null);
+      setCustomLyricFontUrl(null);
+    }
+  }, []);
+
+  const handleCustomFontFileChange = useCallback(async (
+    file: File | null,
+    target: "title" | "lyric",
+  ) => {
+    const fallbackStack =
+      target === "title" ? activeTitleFontPreset.fontFamily : activeLyricFontPreset.fontFamily;
+    const currentFontFaceRef = target === "title" ? customTitleFontFaceRef : customLyricFontFaceRef;
+    const currentStyleRef = target === "title" ? customTitleFontStyleRef : customLyricFontStyleRef;
+    const requestVersion = ++fontLoadVersionRef.current[target];
+
+    if (!file) {
+      cleanupCustomFont(target);
+      return;
+    }
+
+    cleanupCustomFont(target);
+
     const familyName = `UploadedFont-${target}-${Date.now()}`;
     const nextFontUrl = URL.createObjectURL(file);
-    const font = new FontFace(familyName, `url(${nextFontUrl})`);
-    await font.load();
+    const fontSource = buildFontSource(nextFontUrl, file.name);
+    const styleElement = document.createElement("style");
+
+    styleElement.textContent = `
+      @font-face {
+        font-family: "${familyName}";
+        src: ${fontSource};
+        font-display: swap;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    currentStyleRef.current = styleElement;
+
+    const font = new FontFace(familyName, fontSource, { display: "swap" });
+
+    try {
+      await font.load();
+    } catch (error) {
+      styleElement.remove();
+      currentStyleRef.current = null;
+      URL.revokeObjectURL(nextFontUrl);
+      throw error;
+    }
+
+    if (fontLoadVersionRef.current[target] !== requestVersion) {
+      styleElement.remove();
+      currentStyleRef.current = null;
+      URL.revokeObjectURL(nextFontUrl);
+      return;
+    }
+
     document.fonts.add(font);
+    currentFontFaceRef.current = font;
     const resolvedFamily = `"${familyName}", ${fallbackStack}`;
 
     if (target === "title") {
+      customTitleFontUrlRef.current = nextFontUrl;
       setCustomTitleFontFamily(resolvedFamily);
       setCustomTitleFontLabel(file.name);
       setCustomTitleFontUrl(nextFontUrl);
     } else {
+      customLyricFontUrlRef.current = nextFontUrl;
       setCustomLyricFontFamily(resolvedFamily);
       setCustomLyricFontLabel(file.name);
       setCustomLyricFontUrl(nextFontUrl);
@@ -197,21 +286,15 @@ function PlayerScreen(props: {
   }, [
     activeLyricFontPreset.fontFamily,
     activeTitleFontPreset.fontFamily,
-    customLyricFontUrl,
-    customTitleFontUrl,
+    cleanupCustomFont,
   ]);
 
   useEffect(() => {
     return () => {
-      if (customTitleFontUrl) {
-        URL.revokeObjectURL(customTitleFontUrl);
-      }
-
-      if (customLyricFontUrl) {
-        URL.revokeObjectURL(customLyricFontUrl);
-      }
+      cleanupCustomFont("title");
+      cleanupCustomFont("lyric");
     };
-  }, [customLyricFontUrl, customTitleFontUrl]);
+  }, [cleanupCustomFont]);
 
   useEffect(() => {
     setLyricOffsetMs(0);
