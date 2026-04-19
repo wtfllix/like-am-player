@@ -70,6 +70,27 @@ function buildFontSource(fontUrl: string, fileName: string) {
   return format ? `url("${safeUrl}") format("${format}")` : `url("${safeUrl}")`;
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("字体文件读取失败。"));
+    };
+
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("字体文件读取失败。"));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
 function PlayerScreen(props: {
   config: SongConfig;
   initialCustomFonts: {
@@ -237,7 +258,8 @@ function PlayerScreen(props: {
 
     const familyName = `UploadedFont-${target}-${Date.now()}`;
     const nextFontUrl = URL.createObjectURL(file);
-    const fontSource = buildFontSource(nextFontUrl, file.name);
+    const fontDataUrl = await readFileAsDataUrl(file);
+    const fontSource = buildFontSource(fontDataUrl, file.name);
     const styleElement = document.createElement("style");
 
     styleElement.textContent = `
